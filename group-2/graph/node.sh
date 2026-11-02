@@ -97,11 +97,13 @@ allowed() {
   return 1
 }
 after=$(changes)
+prefix=$(git rev-parse --show-prefix 2> /dev/null)
 outside=$(printf '%s\n' "$after" | while IFS= read -r line; do
   [ -n "$line" ] || continue
   printf '%s\n' "$before" | grep -qxF -- "$line" && continue
   p=${line#???}
   p=${p##* -> }
+  p=${p#"$prefix"}
   allowed "$p" || printf '%s ' "$p"
 done)
 [ -z "$outside" ] || finish red "agent touched outside $dir: ${outside% }"

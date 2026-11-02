@@ -23,3 +23,4 @@ when	who	what	why	evidence
 2026-11-02 22:43	group 2	Rounds before a person: 2 (on the check and review lines)	not given	graph/path.jsonl, rounds
 2026-11-02 22:43	group 2	The reviewer may block on tests and lint only, not design	not given	.github/skills/reviewer/SKILL.md
 2026-11-02 22:44	group 2	A person merges the pull request (no auto merge)	not given	graph/path.jsonl, deliver line
+2026-11-02 22:48	group 2	Fix the node path bug (prefix of a subfolder repo) with a worker, ticket 009, test first	not given	tickets/009-node-in-a-subfolder.md
