@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>page shops</title>
+</head>
+<body>
+<pre id="result"></pre>
+<div id="app"></div>
+<script src="check.js"></script>
+<script src="../stock.js"></script>
+<script src="../reservations.js"></script>
+<script src="../data.js"></script>
+<script src="../page.js"></script>
+<script>
+var NOW = 1000 * 60 * 60 * 1000;
+var blackM = { product: "jacket", size: "M", colour: "black" };
+var memory = {};
+var storage = {
+  getItem: function (k) { return Object.prototype.hasOwnProperty.call(memory, k) ? memory[k] : null; },
+  setItem: function (k, v) { memory[k] = String(v); }
+};
+var seeded = setCount(setCount(emptyStock(), "Old town", blackM, 3), "Graslin", blackM, 0);
+saveState(storage, { stock: seeded, reservations: [] });
+
+var root = document.getElementById("app");
+startPage(root, storage, function () { return NOW; });
+
+function pick(name, value) {
+  var el = root.querySelector("[name=" + name + "]");
+  el.value = value;
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+function rows() {
+  return Array.prototype.map.call(root.querySelectorAll("[data-shop]"), function (li) {
+    return { shop: li.getAttribute("data-shop"), free: li.querySelector(".free").textContent };
+  });
+}
+function options(name) {
+  return Array.prototype.map.call(root.querySelectorAll("[name=" + name + "] option"), function (o) {
+    return o.value;
+  });
+}
+
+pick("product", "jacket");
+pick("size", "M");
+pick("colour", "black");
+check("3.1 jacket black M lists the four shops with their free units", rows(), [
+  { shop: "Old town", free: "3" },
+  { shop: "Graslin", free: "0" },
+  { shop: "Île de Nantes", free: "0" },
+  { shop: "Chantenay", free: "0" }
+]);
+
+var graslin = root.querySelector("[data-shop='Graslin']");
+var oldTown = root.querySelector("[data-shop='Old town']");
+check("3.2 a shop with 0 free is listed with 0 and offers no reserve",
+  [graslin.querySelector(".free").textContent, graslin.querySelector(".reserve") === null,
+   oldTown.querySelector(".reserve") !== null], ["0", true, true]);
+
+pick("product", "sandal");
+check("3.3 after sandal the colours are tan and black", options("colour"), ["tan", "black"]);
+
+pick("product", "jacket");
+pick("size", "M");
+pick("colour", "black");
+var li = root.querySelector("[data-shop='Old town']");
+li.querySelector("input").value = "-1";
+li.querySelector("button.set").click();
+var after = root.querySelector("[data-shop='Old town']");
+check("1.3 a count of -1 shows a message and the number does not change",
+  [root.querySelector(".message").textContent !== "", after.querySelector(".free").textContent,
+   countOf(loadState(storage).stock, "Old town", blackM)], [true, "3", 3]);
+
+var li2 = root.querySelector("[data-shop='Chantenay']");
+li2.querySelector("input").value = "5";
+li2.querySelector("button.set").click();
+check("1.1 setting a valid count shows it and saves it",
+  [root.querySelector("[data-shop='Chantenay'] .free").textContent,
+   countOf(loadState(storage).stock, "Chantenay", blackM)], ["5", 5]);
+</script>
+</body>
+</html>
