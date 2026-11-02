@@ -57,6 +57,13 @@ exits 1.
    `graph/runs/` ("agent touched outside <dir>: <paths>"); the report says
    `Verdict: block` ("reviewer blocked: <the line after it>"). Else green.
 
+   **The group folder is not the root of the repository.** It is `group-N/` inside the
+   workshop's repository, and git prints every path from the root: `group-2/app/stock.js`,
+   not `app/stock.js`. Take that prefix off before comparing with `<dir>/` and
+   `graph/runs/`: `git rev-parse --show-prefix`, run from the group folder, prints it
+   (`group-2/`), or nothing at the root. Without it, an agent that wrote only in `app/` is
+   red the first time a real run goes, in hour 3.
+
 ## The six cases: `graph/tests/test-node.sh`
 
 Each one a check against `graph/tests/fake-agent.sh`, never a model. Print `  ok   <case>`
