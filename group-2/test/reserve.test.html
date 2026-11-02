@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>reserve</title>
+</head>
+<body>
+<pre id="result"></pre>
+<script src="check.js"></script>
+<script src="../stock.js"></script>
+<script src="../reservations.js"></script>
+<script>
+var now = 1000 * 60 * 60 * 1000;
+var blackM = { product: "jacket", size: "M", colour: "black" };
+var stock = setCount(emptyStock(), "Graslin", blackM, 2);
+
+function request(units, customer) {
+  return { shop: "Graslin", product: "jacket", size: "M", colour: "black",
+    units: units, customer: customer };
+}
+
+var r1 = reserve(stock, [], request(1, "Claire Martin"), now);
+check("4.1 one reservation added", r1.length, 1);
+check("4.1 it is for Claire Martin", r1[0].customer, "Claire Martin");
+check("4.1 it is active and made now", [r1[0].status, r1[0].madeAt], ["active", now]);
+check("4.1 freeUnits in Graslin gives 1", freeUnits(stock, r1, "Graslin", blackM, now), 1);
+
+var r2 = reserve(stock, [], request(1, "Ana"), now);
+check("4.2 a request with no role is reserved", r2.length, 1);
+
+var empty = [];
+checkThrows("4.3 an empty customer name throws", function () {
+  reserve(stock, empty, request(1, ""), now);
+}, "name");
+check("4.3 the list is unchanged", empty, []);
+
+checkThrows("5.1 reserving 3 of 2 free throws", function () {
+  reserve(stock, [], request(3, "Ana"), now);
+}, "only 2 are free");
+check("5.1 freeUnits still gives 2", freeUnits(stock, [], "Graslin", blackM, now), 2);
+
+var r3 = reserve(stock, [], request(2, "Ana"), now);
+check("5.2 reserving exactly the free units is accepted", r3.length, 1);
+check("5.2 freeUnits gives 0", freeUnits(stock, r3, "Graslin", blackM, now), 0);
+
+var none = [];
+checkThrows("5.3 reserving 0 units throws", function () {
+  reserve(stock, none, request(0, "Ana"), now);
+}, "units");
+check("5.3 the list is unchanged", none, []);
+</script>
+</body>
+</html>
