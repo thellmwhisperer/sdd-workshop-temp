@@ -33,3 +33,22 @@ function countOf(stock, shop, variant) {
   }
   return counts[keyOf(variant)];
 }
+
+// A reservation holds its units for 48 hours.
+var RESERVATION_MS = 48 * 60 * 60 * 1000;
+
+// isActive(reservation, now): status is "active" and less than 48 hours have passed since madeAt.
+function isActive(reservation, now) {
+  return reservation.status === "active" && now - reservation.madeAt < RESERVATION_MS;
+}
+
+// freeUnits(stock, reservations, shop, variant, now): the count minus the units held by active reservations.
+function freeUnits(stock, reservations, shop, variant, now) {
+  var held = 0;
+  reservations.forEach(function (r) {
+    if (r.shop === shop && keyOf(r) === keyOf(variant) && isActive(r, now)) {
+      held += r.units;
+    }
+  });
+  return countOf(stock, shop, variant) - held;
+}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>free units</title>
+</head>
+<body>
+<pre id="result"></pre>
+<script src="check.js"></script>
+<script src="../stock.js"></script>
+<script>
+var HOUR = 60 * 60 * 1000;
+var now = 1000 * HOUR;
+var blackM = { product: "jacket", size: "M", colour: "black" };
+var stock = setCount(emptyStock(), "Old town", blackM, 3);
+
+function reservation(madeAt) {
+  return { id: "r1", shop: "Old town", product: "jacket", size: "M", colour: "black",
+    units: 1, customer: "Ana", madeAt: madeAt, status: "active" };
+}
+
+check("2.1 one reserved of 3 leaves 2 free",
+  freeUnits(stock, [reservation(now - HOUR)], "Old town", blackM, now), 2);
+check("2.2 no reservation leaves 3 free",
+  freeUnits(stock, [], "Old town", blackM, now), 3);
+check("6.1 reserved 47h59m ago still holds: 2 of 3",
+  freeUnits(stock, [reservation(now - 48 * HOUR + 60 * 1000)], "Old town", blackM, now), 2);
+check("6.2 reserved 48h ago no longer holds: 3 of 3",
+  freeUnits(stock, [reservation(now - 48 * HOUR)], "Old town", blackM, now), 3);
+</script>
+</body>
+</html>
