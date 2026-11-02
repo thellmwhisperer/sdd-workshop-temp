@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>page reserve</title>
+</head>
+<body>
+<pre id="result"></pre>
+<div id="app"></div>
+<script src="check.js"></script>
+<script src="../stock.js"></script>
+<script src="../reservations.js"></script>
+<script src="../data.js"></script>
+<script src="../page.js"></script>
+<script>
+var NOW = 1000 * 60 * 60 * 1000;
+var blackM = { product: "jacket", size: "M", colour: "black" };
+var memory = {};
+var storage = {
+  getItem: function (k) { return Object.prototype.hasOwnProperty.call(memory, k) ? memory[k] : null; },
+  setItem: function (k, v) { memory[k] = String(v); }
+};
+saveState(storage, { stock: setCount(emptyStock(), "Graslin", blackM, 2), reservations: [] });
+
+var root = document.getElementById("app");
+startPage(root, storage, function () { return NOW; });
+
+function pick(name, value) {
+  var el = root.querySelector("[name=" + name + "]");
+  el.value = value;
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+function graslin() { return root.querySelector("[data-shop='Graslin']"); }
+function free() { return graslin().querySelector(".free").textContent; }
+function reserveFor(customer, units) {
+  var li = graslin();
+  li.querySelector("input[name=customer]").value = customer;
+  li.querySelector("input[name=units]").value = String(units);
+  li.querySelector("button.reserve").click();
+}
+
+pick("product", "jacket");
+pick("size", "M");
+pick("colour", "black");
+
+reserveFor("", 1);
+check("4.3 no customer name shows the name is missing and Graslin still shows 2",
+  [root.querySelector(".message").textContent.indexOf("name is missing") >= 0, free(),
+   loadState(storage).reservations.length], [true, "2", 0]);
+
+reserveFor("Claire Martin", 3);
+check("5.1 reserving 3 where 2 are free says only 2 are free and Graslin still shows 2",
+  [root.querySelector(".message").textContent.indexOf("only 2 are free") >= 0, free()],
+  [true, "2"]);
+
+reserveFor("Claire Martin", 1);
+var saved = loadState(storage).reservations;
+check("4.1 reserving 1 for Claire Martin shows Graslin with 1 free and saves it",
+  [free(), saved.length, saved[0].customer, saved[0].units, saved[0].shop],
+  ["1", 1, "Claire Martin", 1, "Graslin"]);
+
+var text = root.textContent.toLowerCase() + root.innerHTML.toLowerCase();
+check("4.2 nothing on the page asks for a manager or a login",
+  [/manager|login|log in|password/.test(text),
+   root.querySelectorAll("input[type=password]").length], [false, 0]);
+</script>
+</body>
+</html>

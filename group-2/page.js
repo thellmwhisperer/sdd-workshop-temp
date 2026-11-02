@@ -97,9 +97,31 @@ function startPage(root, storage, now) {
       });
       li.appendChild(set);
       if (free > 0) {
-        var reserve = make("button", "reserve", "Reserve");
-        reserve.type = "button";
-        li.appendChild(reserve);
+        var customer = make("input");
+        customer.name = "customer";
+        customer.placeholder = "Customer name";
+        var units = make("input");
+        units.name = "units";
+        units.type = "number";
+        units.value = "1";
+        var reserveButton = make("button", "reserve", "Reserve");
+        reserveButton.type = "button";
+        reserveButton.addEventListener("click", function () {
+          try {
+            var request = { shop: shop, product: variant.product, size: variant.size,
+              colour: variant.colour, units: Number(units.value), customer: customer.value };
+            state = { stock: state.stock,
+              reservations: reserve(state.stock, state.reservations, request, now()) };
+            saveState(storage, state);
+            message = "";
+          } catch (e) {
+            message = e.message;
+          }
+          draw();
+        });
+        li.appendChild(customer);
+        li.appendChild(units);
+        li.appendChild(reserveButton);
       }
       list.appendChild(li);
     });
