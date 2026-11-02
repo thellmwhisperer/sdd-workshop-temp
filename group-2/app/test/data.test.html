@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>data</title>
+</head>
+<body>
+<pre id="result"></pre>
+<script src="check.js"></script>
+<script src="../stock.js"></script>
+<script src="../reservations.js"></script>
+<script src="../data.js"></script>
+<script>
+function fakeStorage() {
+  var items = {};
+  return {
+    getItem: function (key) { return Object.prototype.hasOwnProperty.call(items, key) ? items[key] : null; },
+    setItem: function (key, value) { items[key] = String(value); }
+  };
+}
+
+var sandal = optionsFor("sandal");
+check("3.3 sandal colours are tan and black", sandal.colours, ["tan", "black"]);
+check("3.3 sandal is never navy", sandal.colours.indexOf("navy"), -1);
+var jacket = optionsFor("jacket");
+check("3.3 jacket colours are black and navy", jacket.colours, ["black", "navy"]);
+check("3.3 jacket sizes are M and L", jacket.sizes, ["M", "L"]);
+
+check("design SHOPS in order", SHOPS, ["Old town", "Graslin", "Île de Nantes", "Chantenay"]);
+
+var empty = loadState(fakeStorage());
+check("design nothing saved: no reservations", empty.reservations, []);
+var zeros = true;
+SHOPS.forEach(function (shop) {
+  CATALOGUE.forEach(function (p) {
+    optionsFor(p.product).sizes.forEach(function (size) {
+      optionsFor(p.product).colours.forEach(function (colour) {
+        if (countOf(empty.stock, shop, { product: p.product, size: size, colour: colour }) !== 0) {
+          zeros = false;
+        }
+      });
+    });
+  });
+});
+check("design nothing saved: every count is 0", zeros, true);
+
+var blackM = { product: "jacket", size: "M", colour: "black" };
+var storage = fakeStorage();
+var stock = setCount(emptyStock(), "Graslin", blackM, 2);
+var held = reserve(stock, [], { shop: "Graslin", product: "jacket", size: "M", colour: "black",
+  units: 1, customer: "Claire Martin" }, 1000);
+saveState(storage, { stock: stock, reservations: held });
+var back = loadState(storage);
+check("design saved count comes back", countOf(back.stock, "Graslin", blackM), 2);
+check("design saved reservation comes back", back.reservations, held);
+</script>
+</body>
+</html>
