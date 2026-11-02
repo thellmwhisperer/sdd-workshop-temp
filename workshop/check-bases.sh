@@ -130,11 +130,12 @@ check 'the publish script parses' sh -n "$workshop/../.github/pages/publish.sh"
 
 echo "hour 4's memory: search by meaning, with a small model and its program for the Mac"
 mem="$workshop/inputs/hour-4/memory"
-# vectors_ready <db>: every exchange, thought and memory has its vector.
+# vectors_ready <db>: every exchange, thought and memory has its vectors, one or more
+# windows each.
 vectors_ready() {
-  [ "$(sqlite3 "$1" "SELECT (SELECT count(*) FROM exchanges) = (SELECT count(*) FROM exchange_vectors)
-    AND (SELECT count(*) FROM thinking_blocks) = (SELECT count(*) FROM thinking_vectors)
-    AND (SELECT count(*) FROM memories) = (SELECT count(*) FROM memory_vectors);")" = 1 ]
+  [ "$(sqlite3 "$1" "SELECT (SELECT count(*) FROM exchanges) = (SELECT count(DISTINCT id) FROM exchange_vectors)
+    AND (SELECT count(*) FROM thinking_blocks) = (SELECT count(DISTINCT id) FROM thinking_vectors)
+    AND (SELECT count(*) FROM memories) = (SELECT count(DISTINCT id) FROM memory_vectors);")" = 1 ]
 }
 # fresh_memory: a copy of the memory in the scratch folder, with no day of a group kept yet,
 # and a home with no Copilot sessions.
@@ -187,7 +188,7 @@ like_a_corpus() {
     [ "$(sqlite3 "$lc_db" "SELECT group_concat(tool_name || ':' || had_error || ':' || error_message, ' ') FROM tool_uses WHERE session_id LIKE 'runs/%';")" = \
       'bash:1:Permission denied view:0:' ] &&
     [ "$(sqlite3 "$lc_db" "SELECT count(*) FROM memories WHERE content LIKE '%the whole skill file%';")" = 0 ] &&
-    memory ask "empty basket" | grep -q 'The reviewer answered: I blocked it' &&
+    memory ask "empty basket" | grep -q 'The reviewer said: I blocked it' &&
     memory ask "empty basket" | grep -q 'You said: Review the ticket.' &&
     memory sql "SELECT tool_params_summary FROM tool_uses WHERE had_error;" | grep -q 'outside.txt'
 }
@@ -212,6 +213,7 @@ check 'by meaning on this machine: "who is allowed to merge?" finds Ines in the 
   meaning_finds 'who is allowed to merge?' 'Ines said: # Chief and Ines · 12 March'
 check "the group's own day first; the example team only before it is kept or with --example" own_day_first
 check "a Copilot conversation kept as La Roca keeps one: who said what, thoughts, tools and denials; the chief's sessions of this repository only" like_a_corpus
+check 'search by meaning finds what the agents said, not only the conversations with the chief (workshop/test-memory.sh)' green "$workshop/test-memory.sh"
 
 echo "the chief: Javier's talk of each module, as a skill"
 for m in 1 2 3 4; do

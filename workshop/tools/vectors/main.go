@@ -2,18 +2,29 @@
 // No server, no download, no library to install: one file for each system, and the model.
 // memory/memory.sh calls it; sqlite3 keeps the pieces and their vectors.
 //
-//	vectors embed <model> [table]  stdin: [{"id":1,"text":"..."}] as sqlite3 -json prints
-//	                               stdout: the SQL that stores each text's vector in table
-//	                               (vectors when not given)
-//	vectors near <model> <k> <q>   stdin: [{"id":1,"v":"<hex>"}], the stored vectors
-//	                               stdout: the k pieces closest to the question, "id<TAB>score"
+//	vectors embed <model> [table]  stdin: [{"id":1,"col":"agent_text","title":"...",
+//	                               "at":"2026-10-31 20:21","text":"..."}] as sqlite3 -json
+//	                               prints. stdout: the SQL that stores the vectors of each
+//	                               text in table (vectors when not given), one per window
+//	vectors near <model> <k> <q>   stdin: [{"id":1,"part":0,"v":"<hex>"}], the stored vectors
+//	                               stdout: the k rows closest to the question, by their best
+//	                               window, "id<TAB>part<TAB>score"
 //	vectors events <id> <kind> <title>
 //	                               stdin: a Copilot conversation, one event per line
 //	                               stdout: the SQL that stores it as La Roca's corpus does:
 //	                               sessions, exchanges, tool_uses, thinking_blocks (events.go)
 //
-// A vector is stored as 384 bytes, each number times 127. The score is the cosine: 1 is the
-// same meaning, 0 nothing in common.
+// A text is read for meaning as La Roca reads its corpus (plugins/vector/internal/vector/
+// chunk.go): each column on its own (what the human said, what the agent answered), cut in
+// overlapping windows, each window with "[title · month] " in front. La Roca's windows are
+// 250 words that overlap by 100, for a model that reads 512 tokens (nomic-embed-text-v2,
+// internal/model/manifest.go). MiniLM reads 256, and agent prose (file names, code) takes
+// about two tokens a word: so here a window is 100 words that overlap by 40, the same share,
+// and windows_test.go checks it fits. A window of 250 words is over 300 tokens, and
+// MiniLM would never read its end: on 1 November a worker's whole answer was one vector,
+// read up to the brief, and its words were never found.
+// A vector is stored as 384 bytes, each number times 127, with the window it was made from.
+// The score is the cosine: 1 is the same meaning, 0 nothing in common.
 package main
 
 import (
@@ -27,9 +38,76 @@ import (
 	"runtime"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
+
+const (
+	windowWords  = 100 // La Roca's defaultChunkTokens (250), cut to what MiniLM reads of agent prose
+	overlapWords = 40  // La Roca's defaultOverlapTokens (100), the same share of a window
+	titleRunes   = 80  // as La Roca: maxChunkContextRunes
+)
+
+// windows: the text cut in windows of size words that overlap by overlap words; the text
+// itself when it is not longer than one window (La Roca's tokenChunks).
+func windows(text string, size, overlap int) []string {
+	var spans [][2]int
+	start := -1
+	for i := 0; i < len(text); {
+		r, w := utf8.DecodeRuneInString(text[i:])
+		if unicode.IsSpace(r) {
+			if start >= 0 {
+				spans = append(spans, [2]int{start, i})
+				start = -1
+			}
+		} else if start < 0 {
+			start = i
+		}
+		i += w
+	}
+	if start >= 0 {
+		spans = append(spans, [2]int{start, len(text)})
+	}
+	if len(spans) == 0 {
+		return nil
+	}
+	if len(spans) <= size {
+		return []string{text}
+	}
+	var out []string
+	for s := 0; s < len(spans); s += size - overlap {
+		e := min(s+size, len(spans))
+		out = append(out, text[spans[s][0]:spans[e-1][1]])
+		if e == len(spans) {
+			break
+		}
+	}
+	return out
+}
+
+// windowHeader: "[title · 2026-10] " in front of every window, as La Roca's chunkHeader.
+func windowHeader(title, at string) string {
+	title = strings.Join(strings.Fields(title), " ")
+	if r := []rune(title); len(r) > titleRunes {
+		title = strings.TrimSpace(string(r[:titleRunes-1])) + "…"
+	}
+	month := ""
+	if len(at) >= 7 && at[4] == '-' {
+		month = at[:7]
+	}
+	switch {
+	case title != "" && month != "":
+		return "[" + title + " · " + month + "] "
+	case title != "":
+		return "[" + title + "] "
+	case month != "":
+		return "[" + month + "] "
+	}
+	return ""
+}
 
 func main() {
 	if len(os.Args) < 3 {
@@ -91,13 +169,30 @@ func readJSON(v any) {
 	}
 }
 
-// embedAll: every piece's vector, on all the processor's cores, in the order they came.
+// embedAll: the vector of every window of every text, on all the processor's cores, in the
+// order they came.
 func embedAll(m *model, table string) {
-	var pieces []struct {
-		ID   int64  `json:"id"`
-		Text string `json:"text"`
+	var texts []struct {
+		ID    int64  `json:"id"`
+		Col   string `json:"col"`
+		Title string `json:"title"`
+		At    string `json:"at"`
+		Text  string `json:"text"`
 	}
-	readJSON(&pieces)
+	readJSON(&texts)
+	type piece struct {
+		id        int64
+		col, text string
+		part      int
+		input     string
+	}
+	var pieces []piece
+	for _, t := range texts {
+		h := windowHeader(t.Title, t.At)
+		for i, w := range windows(strings.TrimSpace(t.Text), windowWords, overlapWords) {
+			pieces = append(pieces, piece{t.ID, t.Col, w, i, h + w})
+		}
+	}
 	vecs := make([][]float32, len(pieces))
 	next, done := make(chan int), 0
 	var mu sync.Mutex
@@ -108,7 +203,7 @@ func embedAll(m *model, table string) {
 		go func() {
 			defer wg.Done()
 			for i := range next {
-				vecs[i] = m.embed(pieces[i].Text)
+				vecs[i] = m.embed(pieces[i].input)
 				mu.Lock()
 				done++
 				if done%100 == 0 {
@@ -127,7 +222,8 @@ func embedAll(m *model, table string) {
 	defer out.Flush()
 	fmt.Fprintln(out, "BEGIN;")
 	for i, p := range pieces {
-		fmt.Fprintf(out, "INSERT OR REPLACE INTO %s (id, v) VALUES (%d, X'%s');\n", table, p.ID, hex.EncodeToString(bytes8(vecs[i])))
+		fmt.Fprintf(out, "INSERT OR REPLACE INTO %s (id, col, part, piece, v) VALUES (%d, %s, %d, %s, X'%s');\n",
+			table, p.id, quote(p.col), p.part, quote(p.text), hex.EncodeToString(bytes8(vecs[i])))
 	}
 	fmt.Fprintln(out, "COMMIT;")
 }
@@ -140,18 +236,21 @@ func bytes8(v []float32) []byte {
 	return b
 }
 
-// near: the k stored vectors closest to the question's.
+// near: the k rows closest to the question's, each by its closest window.
 func near(m *model, k int, question string) {
 	var stored []struct {
-		ID int64  `json:"id"`
-		V  string `json:"v"`
+		ID   int64  `json:"id"`
+		Part int    `json:"part"`
+		V    string `json:"v"`
 	}
 	readJSON(&stored)
 	q := m.embed(question)
 	type hit struct {
 		id    int64
+		part  int
 		score float64
 	}
+	best := map[int64]int{}
 	var hits []hit
 	for _, s := range stored {
 		b, err := hex.DecodeString(s.V)
@@ -164,8 +263,15 @@ func near(m *model, k int, question string) {
 			d += v * float64(q[i])
 			n += v * v
 		}
-		if n > 0 {
-			hits = append(hits, hit{s.ID, d / math.Sqrt(n)})
+		if n == 0 {
+			continue
+		}
+		h := hit{s.ID, s.Part, d / math.Sqrt(n)}
+		if i, ok := best[s.ID]; !ok {
+			best[s.ID] = len(hits)
+			hits = append(hits, h)
+		} else if h.score > hits[i].score {
+			hits[i] = h
 		}
 	}
 	sort.Slice(hits, func(i, j int) bool { return hits[i].score > hits[j].score })
@@ -173,6 +279,6 @@ func near(m *model, k int, question string) {
 		hits = hits[:k]
 	}
 	for _, h := range hits {
-		fmt.Printf("%d\t%.2f\n", h.id, h.score)
+		fmt.Printf("%d\t%d\t%.2f\n", h.id, h.part, h.score)
 	}
 }

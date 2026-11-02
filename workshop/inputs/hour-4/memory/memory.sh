@@ -25,10 +25,20 @@
 # By words: SQLite full-text search over what the human said, what the agent answered,
 # what it thought, and the memories. By meaning: a small model on this laptop, MiniLM
 # (minilm.bin, 23 MB), turns each text and the question into a vector; the closest mean
-# the most alike, even with other words. Its code is in workshop/tools/vectors.
+# the most alike, even with other words. Its code is in workshop/tools/vectors. As La Roca:
+# what the human said and what the agent answered get their vectors apart, each text cut in
+# windows of 250 words that overlap by 100, so a long answer is read to its end.
 # Two databases: group.sqlite holds your day; example-team.sqlite the example team, given.
 # Once your day is kept, ask, eval and sql read it; before that, or with --example, the
 # example team. Indexing a folder again replaces only what came from it.
+# Ask shows what it found in two parts: in the runs (what the workers and the reviewers
+# answered, thought and wrote), and in the rest (notes, decisions, the conversations with
+# the chief). The conversations with the chief talk about the runs and repeat the group's
+# questions, so in one list they took every place (1 November); apart, each part has its
+# own. In the runs the brief the graph gives an agent is not searched; a text said in
+# several places counts once; the group's question asked earlier to the chief does not
+# come back. Each line shows the window of text that was found. workshop/test-memory.sh
+# tests it.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 example_db="$here/example-team.sqlite"
@@ -72,10 +82,26 @@ CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
   INSERT INTO memories_fts(rowid, content) VALUES (new.id, new.content); END;
 CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
   INSERT INTO memories_fts(memories_fts, rowid, content) VALUES ('delete', old.id, old.content); END;
-CREATE TABLE IF NOT EXISTS exchange_vectors (id INTEGER PRIMARY KEY, v BLOB);
-CREATE TABLE IF NOT EXISTS thinking_vectors (id INTEGER PRIMARY KEY, v BLOB);
-CREATE TABLE IF NOT EXISTS memory_vectors (id INTEGER PRIMARY KEY, v BLOB);
+CREATE TABLE IF NOT EXISTS exchange_vectors (id INTEGER, col TEXT, part INTEGER, piece TEXT,
+  v BLOB, PRIMARY KEY (id, col, part));
+CREATE TABLE IF NOT EXISTS thinking_vectors (id INTEGER, col TEXT, part INTEGER, piece TEXT,
+  v BLOB, PRIMARY KEY (id, col, part));
+CREATE TABLE IF NOT EXISTS memory_vectors (id INTEGER, col TEXT, part INTEGER, piece TEXT,
+  v BLOB, PRIMARY KEY (id, col, part));
 SQL
+}
+
+# old_vectors <db>: the SQL that drops vectors kept the old way, one per row and without
+# their window; embed_missing makes them again. They are made from the text, never the
+# source.
+old_vectors() {
+  [ -f "$1" ] || return 0
+  for kind in exchange thinking memory; do
+    if [ "$(sqlite3 -readonly "$1" "SELECT count(*) FROM sqlite_master WHERE name = '${kind}_vectors';")" = 1 ] &&
+      [ "$(sqlite3 -readonly "$1" "SELECT count(*) FROM pragma_table_info('${kind}_vectors') WHERE name = 'part';")" = 0 ]; then
+      printf 'DROP TABLE %s_vectors;\n' "$kind"
+    fi
+  done
 }
 
 # forget <prefix>: the SQL that removes what came from one folder before it is read again.
@@ -202,6 +228,7 @@ index_all() {
     if [ "$folder" != chief ] && [ "$(basename "$folder")" = example-team ]; then db=$example_db; fi
   done
   {
+    old_vectors "$db"
     schema
     printf 'BEGIN;\n'
     for folder in "$@"; do
@@ -257,17 +284,25 @@ summary() {
   }
 }
 
-# embed_missing <db>: the vector of every text that has none yet.
+# embed_missing <db>: the vectors of every text that has none yet: what the human said and
+# what the agent answered apart, each with the title of its conversation and its month.
 embed_missing() {
   vp=$(vectors_program)
   [ -n "$vp" ] || { printf 'by meaning: no program for this system; ask finds by words only\n'; return 0; }
-  for kind in exchange thinking memory; do
+  for job in exchange:human_text exchange:agent_text thinking:full_text memory:content; do
+    kind=${job%%:*} col=${job#*:}
     case $kind in
-      exchange) q="SELECT id, human_text || char(10) || agent_text AS text FROM exchanges" ;;
-      thinking) q="SELECT id, full_text AS text FROM thinking_blocks" ;;
-      memory) q="SELECT id, content AS text FROM memories" ;;
+      exchange) q="SELECT x.id, '$col' AS col, s.title AS title,
+          coalesce(nullif(x.human_timestamp, ''), x.agent_timestamp, '') AS at, x.$col AS text
+          FROM exchanges x LEFT JOIN sessions s USING (session_id)" ;;
+      thinking) q="SELECT x.id, '$col' AS col, s.title AS title,
+          coalesce(nullif(e.agent_timestamp, ''), e.human_timestamp, '') AS at, x.$col AS text
+          FROM thinking_blocks x LEFT JOIN sessions s USING (session_id)
+          LEFT JOIN exchanges e ON e.session_id = x.session_id AND e.exchange_number = x.exchange_number" ;;
+      memory) q="SELECT x.id, '$col' AS col, '' AS title, '' AS at, x.$col AS text FROM memories x" ;;
     esac
-    sqlite3 -json "$1" "$q WHERE id NOT IN (SELECT id FROM ${kind}_vectors);" > "$here/.embed.json"
+    sqlite3 -json "$1" "$q WHERE coalesce(x.$col, '') != ''
+      AND x.id NOT IN (SELECT id FROM ${kind}_vectors WHERE col = '$col');" > "$here/.embed.json"
     "$vp" embed "$here/minilm.bin" "${kind}_vectors" < "$here/.embed.json" > "$here/.vectors.sql"
     sqlite3 "$1" < "$here/.vectors.sql"
     rm -f "$here/.embed.json" "$here/.vectors.sql"
@@ -282,8 +317,36 @@ which_db() {
   if [ "$example" = no ] && indexed "$group_db"; then printf '%s\n' "$group_db"; else printf '%s\n' "$example_db"; fi
 }
 
-# The rows found, one per line: "kind<TAB>id<TAB>score".
-# by_words <db> <question>: the best 3 by words, across what was said, thought and written.
+# The rows found, one per line: "kind<TAB>id<TAB>score<TAB>column<TAB>piece", where piece
+# is "words:" and the words around what was found, or "window:<n>" for the window n found
+# by meaning.
+# in_scope <kind> <scope>: the SQL of a kind's rows in one part: runs, or rest.
+in_scope() {
+  case $1 in
+    memory) t=memories; runs="source LIKE 'runs/%' OR source LIKE '%/runs/%'" ;;
+    thinking) t=thinking_blocks; runs="session_id LIKE 'runs/%' OR session_id LIKE '%/runs/%'" ;;
+    *) t=exchanges; runs="session_id LIKE 'runs/%' OR session_id LIKE '%/runs/%'" ;;
+  esac
+  if [ "$2" = runs ]; then printf 'SELECT id FROM %s WHERE (%s)' "$t" "$runs"; else printf 'SELECT id FROM %s WHERE NOT (%s)' "$t" "$runs"; fi
+}
+table_of() { case $1 in memory) printf memories ;; thinking) printf thinking_blocks ;; *) printf exchanges ;; esac; }
+fts_of() { case $1 in memory) printf memories_fts ;; thinking) printf thinking_fts ;; *) printf exchanges_fts ;; esac; }
+# jobs <scope>: what is searched in a part, as kind:column. In the runs, what the graph
+# asked an agent (its brief, almost the same in every run) is not: it took the places of
+# what the agents answered. sql still reads it.
+jobs() {
+  if [ "$1" = runs ]; then
+    printf '%s\n' exchange:agent_text thinking:full_text memory:content
+  else
+    printf '%s\n' exchange:human_text exchange:agent_text thinking:full_text memory:content
+  fi
+}
+# best <n>: the best line of each row, sorted by score (high first: give scores that way),
+# the first n.
+best() { sort -t '	' -k3,3 -rn | awk -F '\t' '!seen[$1 FS $2]++' | head -n "$1"; }
+
+# by_words <db> <question> <scope> <n>: the best n by words in one part; a text said in
+# several places counts once.
 by_words() {
   words=$(printf '%s\n' "$2" | awk '
     BEGIN {
@@ -295,28 +358,52 @@ by_words() {
     { $0 = tolower($0); gsub(/[^[:alnum:]]+/, " ")
       for (i = 1; i <= NF; i++) if (!($i in stop)) printf "%s\"%s\"", (out++ ? " " : ""), $i }')
   [ -n "$words" ] || return 0
-  m=$(printf '%s' "$words" | sql_quote)
-  sqlite3 -readonly -batch -noheader -separator '	' "$1" "
-    SELECT kind, id, score FROM (
-      SELECT 'exchange' AS kind, rowid AS id, bm25(exchanges_fts) AS score FROM exchanges_fts WHERE exchanges_fts MATCH $m
-      UNION ALL SELECT 'thinking', rowid, bm25(thinking_fts) FROM thinking_fts WHERE thinking_fts MATCH $m
-      UNION ALL SELECT 'memory', rowid, bm25(memories_fts) FROM memories_fts WHERE memories_fts MATCH $m)
-    ORDER BY score LIMIT 3;"
+  jobs "$3" | while IFS=: read -r kind col; do
+    fts=$(fts_of "$kind")
+    case $col in human_text) c=0 ;; agent_text) c=1 ;; *) c=0 ;; esac
+    m=$(printf '%s : (%s)' "$col" "$words" | sql_quote)
+    # bm25 is lower for a better match: its negative sorts high first, as the vectors do.
+    # The full-text match in a step of its own (MATERIALIZED): bm25 and snippet refuse to
+    # run once SQLite folds the match into the join.
+    sqlite3 -readonly -batch -noheader -separator '	' "$1" "
+      WITH h AS MATERIALIZED (
+        SELECT rowid AS id, bm25($fts) AS score,
+          replace(replace(replace(snippet($fts, $c, '', '', '…', 40), char(9), ' '), char(10), ' '), char(13), ' ') AS piece
+        FROM $fts WHERE $fts MATCH $m AND rowid IN ($(in_scope "$kind" "$3")))
+      SELECT '$kind', min(h.id), -min(h.score), '$col', 'words:' || min(h.piece)
+      FROM h JOIN $(table_of "$kind") x ON x.id = h.id GROUP BY x.$col;"
+  done | best "$4"
 }
 
-# by_meaning <db> <question>: the 3 closest in meaning, across the same three.
+# by_meaning <db> <question> <scope> <n>: the n closest in meaning in one part, each row by
+# its closest window; a text said in several places counts once. In the rest, a turn whose
+# human said the same as the question (0.85 or more: typed with a slip, it was 0.89 on 1
+# November) is the question itself, asked earlier
+# to the chief: the whole turn is left out, the chief's answer too, since it answers
+# nothing yet.
 by_meaning() {
   vp=$(vectors_program)
   [ -n "$vp" ] || return 0
-  for kind in exchange thinking memory; do
-    sqlite3 -readonly -json "$1" "SELECT id, hex(v) AS v FROM ${kind}_vectors;" > "$here/.near.json"
-    "$vp" near "$here/minilm.bin" 3 "$2" < "$here/.near.json" | awk -v k="$kind" 'NF == 2 { print k "\t" $1 "\t" $2 }'
-  done | sort -t '	' -k3,3 -rn | head -n 3
-  rm -f "$here/.near.json"
+  : > "$here/.asked.txt"
+  if [ "$3" = rest ]; then
+    sqlite3 -readonly -json "$1" "SELECT id, part, hex(v) AS v FROM exchange_vectors WHERE col = 'human_text'
+      AND id IN ($(in_scope exchange rest));" > "$here/.near.json"
+    "$vp" near "$here/minilm.bin" 1000000 "$2" < "$here/.near.json" | awk 'NF == 3 && $3 >= 0.85 { print $1 }' > "$here/.asked.txt"
+  fi
+  jobs "$3" | while IFS=: read -r kind col; do
+    t=$(table_of "$kind")
+    sqlite3 -readonly -json "$1" "SELECT id, part, hex(v) AS v FROM ${kind}_vectors WHERE col = '$col'
+      AND id IN (SELECT min(id) FROM $t WHERE id IN ($(in_scope "$kind" "$3")) GROUP BY $col);" > "$here/.near.json"
+    "$vp" near "$here/minilm.bin" "$(($4 + 20))" "$2" < "$here/.near.json" |
+      awk -v k="$kind" -v c="$col" -v asked="$here/.asked.txt" '
+        BEGIN { while ((getline a < asked) > 0) if (k == "exchange") echo[a] = 1 }
+        NF == 3 && !($1 in echo) { print k "\t" $1 "\t" $3 "\t" c "\twindow:" $2 }'
+  done | best "$4"
+  rm -f "$here/.near.json" "$here/.asked.txt"
 }
 
-# show <db> <width>: each "kind<TAB>id<TAB>score" line read in plain words: where it comes
-# from, when, and who said what.
+# show <db> <width>: each line found read in plain words: where it comes from, when, who
+# said it, and the words that were found.
 show() {
   n=0
   w=$2
@@ -327,26 +414,49 @@ show() {
   }
   human="CASE s.kind WHEN 'chief' THEN 'You said' ELSE 'The graph asked' END"
   agent="CASE s.kind WHEN 'chief' THEN 'The chief' WHEN 'worker' THEN 'The worker' WHEN 'reviewer' THEN 'The reviewer' ELSE 'The agent' END"
-  while IFS='	' read -r kind id score; do
+  while IFS='	' read -r kind id score col piece; do
     [ -n "$id" ] || continue
     n=$((n + 1))
-    case $kind in
-      exchange) q="SELECT '  $n. ' || s.title || coalesce(', ' || nullif(e.human_timestamp, ''), '')
-          || CASE WHEN e.human_text != '' THEN char(10) || '     ' || $human || ': ' || $(clip e.human_text) ELSE '' END
-          || CASE WHEN e.agent_text != '' THEN char(10) || '     ' || $agent || ' answered: ' || $(clip e.agent_text) ELSE '' END
+    case $piece in
+      window:*) found="(SELECT piece FROM ${kind}_vectors WHERE id = $id AND col = '$col' AND part = ${piece#window:})" ;;
+      *) found=$(printf '%s' "${piece#words:}" | sql_quote) ;;
+    esac
+    when="coalesce(', ' || coalesce(nullif(e.human_timestamp, ''), nullif(e.agent_timestamp, '')), '')"
+    case $kind:$col in
+      exchange:human_text) q="SELECT '  $n. ' || s.title || $when
+          || char(10) || '     ' || $human || ': ' || $(clip "$found")
+          || CASE WHEN s.kind = 'chief' AND e.agent_text != '' THEN char(10) || '     ' || $agent || ' answered: ' || $(clip e.agent_text) ELSE '' END
           FROM exchanges e JOIN sessions s USING (session_id) WHERE e.id = $id;" ;;
-      thinking) q="SELECT '  $n. ' || s.title || coalesce(', ' || nullif(e.human_timestamp, ''), '')
-          || char(10) || '     ' || $agent || ' thought: ' || $(clip t.full_text)
+      exchange:*) q="SELECT '  $n. ' || s.title || $when
+          || CASE WHEN s.kind = 'chief' AND e.human_text != '' THEN char(10) || '     ' || $human || ': ' || $(clip e.human_text) ELSE '' END
+          || char(10) || '     ' || $agent || CASE s.kind WHEN 'chief' THEN ' answered: ' ELSE ' said: ' END || $(clip "$found")
+          FROM exchanges e JOIN sessions s USING (session_id) WHERE e.id = $id;" ;;
+      thinking:*) q="SELECT '  $n. ' || s.title || $when
+          || char(10) || '     ' || $agent || ' thought: ' || $(clip "$found")
           FROM thinking_blocks t JOIN sessions s USING (session_id)
           LEFT JOIN exchanges e ON e.session_id = t.session_id AND e.exchange_number = t.exchange_number
           WHERE t.id = $id;" ;;
-      memory) q="SELECT '  $n. ' || CASE m.layer WHEN 'decision' THEN 'a decision of the day'
+      *) q="SELECT '  $n. ' || CASE m.layer WHEN 'decision' THEN 'a decision of the day'
             WHEN 'note' THEN 'the chief''s notes' ELSE 'the ' || m.layer END || ', ' || m.source
-          || char(10) || '     ' || coalesce(nullif(m.who, '') || ' said: ', '') || $(clip m.content)
+          || char(10) || '     ' || coalesce(nullif(m.who, '') || ' said: ', '') || $(clip "$found")
           FROM memories m WHERE m.id = $id;" ;;
     esac
     sqlite3 -readonly -batch -noheader "$1" "$q"
   done
+}
+
+# both <search> <db> <question> <none>: what one search found, in its two parts: the best 3
+# in the runs, then the best 2 in the notes, the decisions and the conversations with the
+# chief.
+both() {
+  whose=your
+  if [ "$2" = "$example_db" ]; then whose=their; fi
+  printf '  In %s runs:\n' "$whose"
+  found=$("$1" "$2" "$3" runs 3)
+  if [ -z "$found" ]; then printf '    %s\n' "$4"; else printf '%s\n' "$found" | show "$2" 220; fi
+  printf '  In %s notes, decisions and conversations with %s chief:\n' "$whose" "$whose"
+  found=$("$1" "$2" "$3" rest 2)
+  if [ -z "$found" ]; then printf '    %s\n' "$4"; else printf '%s\n' "$found" | show "$2" 220; fi
 }
 
 ask() {
@@ -358,11 +468,13 @@ ask() {
     printf 'THE EXAMPLE TEAM, THE RESCUE\n'
   fi
   printf '\nFound with your words:\n'
-  found=$(by_words "$db" "$1")
-  if [ -z "$found" ]; then printf '  nothing has all your words\n'; else printf '%s\n' "$found" | show "$db" 220; fi
+  both by_words "$db" "$1" 'nothing has all your words'
   printf '\nFound by meaning, the same idea in other words:\n'
-  close=$(by_meaning "$db" "$1")
-  if [ -z "$close" ]; then printf '  nothing yet: no program for this system\n'; else printf '%s\n' "$close" | show "$db" 220; fi
+  if [ -z "$(vectors_program)" ]; then
+    printf '  nothing: no program for this system\n'
+  else
+    both by_meaning "$db" "$1" 'nothing yet'
+  fi
   printf '\nThe tools the agents used: sh memory/memory.sh tables\n'
 }
 
@@ -408,7 +520,8 @@ model() {
 # evaluate <question>: the same question to the model twice: alone, and with what ask finds.
 evaluate() {
   db=$(which_db)
-  notes=$( { by_meaning "$db" "$1"; by_words "$db" "$1"; } | awk -F '\t' 'NF && !seen[$1 FS $2]++' | show "$db" 600)
+  notes=$( { by_meaning "$db" "$1" runs 3; by_words "$db" "$1" runs 3; by_meaning "$db" "$1" rest 2; by_words "$db" "$1" rest 2; } |
+    awk -F '\t' 'NF && !seen[$1 FS $2]++' | show "$db" 600)
   rule='Do not use any tools. Answer in at most three sentences. If you do not know, say so.'
   printf 'WITHOUT WHAT WAS KEPT:\n%s\n\n' "$(model "$rule
 

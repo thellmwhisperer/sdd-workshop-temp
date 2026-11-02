@@ -125,35 +125,226 @@ Javier closed these. Follow them; never reopen them, and never ask the group abo
 - A run of hour 3 still going when hour 4 starts is left going; when it ends, the group reads what it left before indexing it (decisions 8216 and 8218).
 <!-- source:module end -->
 
-## The hands on, and where each step lives
+## How you run the hands on
 
-| Step in the deck | In the group's folder |
-|---|---|
-| A run from hour 3 still going is left going; when it ends, read what it left | `sh graph/state.sh graph/runs/<run>`, its `report.md`, the verdict, `pr.md` |
-| Index your day: your runs, your notes, your decisions | `sh memory/memory.sh index graph/runs notes chief` |
-| Rebuild one case of your own: what happened, when, who decided, what changed | `sh memory/memory.sh ask "<question>"`; every answer quotes the piece and who said it |
-| The eval, with and without retrieval; the chief proposes one improvement | `sh memory/memory.sh eval "<question>"` |
+`COS.md` says how you act this hour. This is the hands on, move by move, written once.
+Nothing in this skill is any group's story. Every ticket, quote and number you say comes
+from this group's folder, read by you in this session.
 
-The example in the deck: "Why did the reviewer block 001?" Round 1: it took the biggest
-saving of all promotions, a rule that belongs to later tickets; the chief shows the
-reviewer's report. That is group 4's own run; every group asks about its own.
+### The opening, in three turns
 
-The example team (`memory/CASES.md`, `example-team/`) is the rescue, never the plan: open
-it only when the group's own runs are too few to ask about.
+From the group number to their first question, the opening is three turns. The group
+sees for sure only the last message of each of your turns: what you write between
+commands can stay in your own thinking and never reach them (1 November, two rehearsals:
+the first message and the list of their material were written there and lost, and the
+group saw only "the index is ready"). So each move below is the last message of its turn,
+and the group answers before the next one. Never skip one, never merge two, and never jump
+to "the index is ready": the group has to see their material go in.
 
-## Tie the talk to the work
+- **Turn 1**, the reply to their group number: the first message (step 1). Nothing else.
+- **Turn 2**, the reply to whatever they answer: look at their day, open one raw record
+  in the editor panel, and end with what goes in and what happens next (steps 2 and 3).
+- **Turn 3**, the reply to their go: run the index, and end with the index ready and the
+  invitation (step 4).
 
-- The group's own notes (`notes/`, one per hour, written by you) are episodic memory: the
-  decisions of the day backed by their words. Index them with their runs.
-- Ask shows two searches. By words finds the pieces that hold the question's words; when
-  it finds nothing, the team wrote it with other words. By meaning (vectors, MiniLM on
-  the laptop) finds the pieces that mean the same, with other words; its score goes from
-  0, nothing in common, to 1, the same meaning. Read both with the group: that difference
-  is the lesson. A concrete question works better than a vague one.
-- In the eval, the answer without retrieval is the model alone; with retrieval it quotes
-  the source. That is "retrieve before you generate".
-- The improvement you propose comes from what they read: another model, another cap, a new
-  skill. Mark it `(proposal)`; the group decides.
+### 1. The first message: what the Index is for
+
+Turn 1. Send it as soon as you know the group and the status says hour 4, before any
+command of the hour: it needs nothing from their folder. The hour opens with the first word of
+Javier's slide, Index, done together on their day. Speak to the group, in English, in one
+short paragraph:
+
+1. **Welcome them back by their group**, and say you will put the RAG from Javier's talk to
+   work on their own runs.
+2. **What you will do together**: build an index first.
+3. **What you will take and store**: the record of what happened in their runs, their
+   conversations, the decisions they made, kept on this laptop so it can be searched.
+4. **What it is for**: when they ask why something happened, you can go back to what
+   someone actually said.
+5. **What comes next**: seeing what they have to put in the index.
+
+This is the kind of message, as Javier wrote it; say it with their group's number and in
+your own words:
+
+> Welcome back, group <N>. Let's put the RAG from Javier's talk to work on your own runs.
+> First, we'll build an index together. I'll take the record of what happened in your
+> runs, your conversations and the decisions you made, and store them on this laptop so we
+> can search them. That way, when you ask why something happened, we can go back to what
+> someone actually said. Let's start by seeing what we have to put in the index.
+
+The first message never opens a ticket, never tells a story from a run, never quotes
+anyone, and never asks them for a question. It ends with what comes next, and it ends
+your turn. Whatever they answer ("ok", "go on", a question about it), you keep that
+promise in your next turn.
+
+### 2. What goes in: their material
+
+Turn 2. Look at their day first, so you can show it:
+
+- Every run: `ls graph/runs/`, then `sh graph/state.sh graph/runs/<run>` for each one: how
+  it ended, which steps went red, how many times it went back to the worker, the pull
+  request. A run that has not finished and is still going in its terminal is left going
+  (closed decision): when it ends, the first thing you do with the group is read what it
+  left, and it goes into the index after that.
+- Their words: `notes/hour-1.md` to `notes/hour-3.md` and `notes/decisions.tsv`.
+
+If no run of theirs reached the reviewer, their day is too thin to ask about: go to the
+rescue, at the end of this skill.
+
+Open one of their raw records in the editor panel (`open_canvas`, `canvasId` `editor`,
+`scope` `repo`), for example the conversation of one of their reviewers, so they see what
+the index will read: the words as they were said. Where there is no editor panel, say in
+one line which record you would show and leave it.
+
+Then the message that ends the turn: their own material, in their terms, as a short list.
+Each run by its ticket and how it ended; inside each run, the conversation of the worker
+and of the reviewer, what each one thought and every tool it used, its report, the
+verdict, the pull request; their notes of each hour; the decisions of the day with their
+words; their conversations with you. What is missing is said too: no notes yet is "no
+notes yet". Say that nothing is summarised: everything goes in as it was said, with who
+said it. Then, in the same message, step 3.
+
+### 3. What happens while it is processed and stored
+
+At the end of the turn-2 message, before you run anything: one or two lines on what is
+about to happen.
+Every conversation is cut turn by turn, and each turn keeps who said it and when. Every
+note and decision is kept with its words. A small model on this laptop reads each one, so
+later it can be found by what it means, not only by its words. Say "This is the Index from
+the slide: cut what the system produced into pieces and store them." End with one line:
+you will put it in as soon as they say go, or leave out anything they would rather not
+keep. That ends your turn.
+
+### 4. Ready: now they ask
+
+Turn 3. When they say go, run `sh memory/memory.sh index graph/runs notes chief`; if they
+asked to leave something out, leave out that folder and say so. When it comes back, the
+message that ends the turn: say plainly that the index is ready and can be
+searched now, and show what is in it, in the same terms as the list of turn 2. Never the
+line the tool prints, and never a count of what it kept. Then, and only then, invite them:
+what would they like to find out about their day? Then stop and wait for them.
+
+Never end the invitation with a suggested question, a list of questions or "for example".
+The question is theirs.
+
+A run that ends later in the hour is indexed again, so it can be asked too.
+
+**Coming in halfway.** A new session can open when the hour is already going: the status
+says their day is kept, or that they have asked already. Look at their day first. Then
+say, in their terms, that their index is ready, what is in it, and what they have asked
+so far and what came back (read it in `memory/memory.log` and in your conversations with
+them), and ask what they want to find out now. The status is for you: never its step
+letters, "indexed" or "step C".
+
+### 5. Retrieve: their question, answered from their day
+
+First, what kind of question is it?
+
+- **Why, who, what happened**: search it by meaning and by words,
+  `sh memory/memory.sh ask "<their question, in their words>"`.
+- **How many, how much, how long, how often**: count it from the data.
+  `sh memory/memory.sh tables` shows what is kept and four example SELECTs; write the
+  SELECT for their question and run `sh memory/memory.sh sql "<SELECT>"`.
+- **Both in one question**: the why first, then the count, one move each.
+
+Before: one line on what you are about to do, in their terms. After: what came back, as
+things they can judge, one line each: who said it (the group, you, the worker, the
+reviewer, the graph), in which run and step or which hour, and the words, quoted. Then the
+question back to them: does this answer what you asked? Say "This is the Retrieve from the
+slide."
+
+Where a line comes from is said in their terms: "your notes of hour <N>", "the reviewer
+of run <ticket>, round <N>", "the ticket you approved for <what it does>", "your decision
+at <time>", "the worker's own conversation". Never a path, a file name, a field, a model name, a query or
+the tool's own words for what it found. The same goes for what you could not find: say
+what you looked at, in those terms, and only what you checked. Quote what was said in
+plain words, leaving out file names, code and paths even when the source has them. Give
+each thing to whoever the source gives it: what an agent found or said is the agent's,
+what the group decided is the group's. Never "you" for something an agent did.
+
+`ask` shows two searches. Read them with the group without naming how they work: found
+with your words, and found by meaning, the same idea said in other words. When the second
+finds what the first missed, point at it: that is the lesson. Name it, "search by
+meaning", only after they have seen it, or when they ask.
+
+- Quote only what the tool printed or what the file says. Before you build an answer on a
+  line, open its source and read it; when the tool cut a line short, read the rest there.
+- When what came back does not answer them, say so, and offer one other way to ask, from
+  what you saw. Never stitch together an answer the source does not say.
+- Follow the thread at their pace. Open the report or conversation a line came from in
+  the editor panel (`open_canvas`, `canvasId` `editor`, `scope` `repo`) and let them read
+  it. The next question is theirs: who decided, when, what changed after.
+- A count is a sentence with its meaning, and the rows behind it shown, so they can check
+  one. Before you say something is missing from their day, count it: a number you did not
+  see is not zero, and a column you did not read is not empty.
+
+### 6. Generate: the same question, without and with their day
+
+Before: one line, that you will ask the model their question twice, once knowing nothing
+of their day and once with what was just found, and that they will judge which answer
+they can check. Run `sh memory/memory.sh eval "<their question>"`. After: the two answers
+side by side, short, quoted. Without: what the model said alone. With: what it said, and
+which moment of their day it used. Open that moment so they check it themselves, and ask
+them: which one can you check, and is it right? Say "This is the Generate: retrieve
+before you generate."
+
+If the answer with their day is wrong, or names a moment that does not say it, say so:
+that is a finding, not a failure.
+
+### 7. One improvement
+
+From what they found, and only from that: one change to the graph that would have made
+their case go better. Another model for a step, another limit, a new line in a skill or
+in `STANDING.md`. Say it once, with the moment it comes from, marked `(proposal)`. The
+group decides; write their decision in `notes/decisions.tsv` with their words, and make
+the change if they keep it.
+
+### When they are stuck
+
+One hint, concrete, from their own day: one moment you saw in their runs or notes that
+they could ask about, in one line, and the word goes back to them. Never their question
+written for them, never two hints at once. `workshop/hints/hour-4.md` has the hints about
+the tool itself.
+
+### The rescue: the example team
+
+Only when the group's own runs are too few to ask about. Say it plainly, once: their own
+day is short, so they will ask the day of a team that has worked this way for six weeks.
+`memory/CASES.md` has its cases, and the group picks one. Use `ask --example`,
+`eval --example` and `sql --example`. Everything above still holds: the group asks, and
+you show who said it.
+
+## Javier's slide example is not their question
+
+The exchange on his slide ("You: Why did the reviewer block 001?") comes from his own
+group and shows the shape of an answer: the moment, who said it, the report behind it. It
+is not this group's run. Never ask it, never offer it, and never use its ticket.
+
+## The tool, for you only
+
+What `memory/memory.sh` does. Never told to the group this way.
+
+- `index graph/runs notes chief` keeps every agent conversation of every run step: what
+  the graph asked, what the agent answered and thought, every tool it called and whether
+  it was refused, the model, tokens and cost. It keeps the reports, verdicts, journals and
+  pull requests the runs left, the notes and decisions, and, with `chief`, this
+  repository's conversations with you. Indexing again replaces what came from the same
+  folder.
+- `ask "<question>"` searches by words and by meaning, and each search prints two parts:
+  the best three lines in the runs (what the workers, the reviewers and the graph said,
+  thought and wrote) and the best two in the notes, the decisions and the conversations
+  with you. Each line says where it comes from, when, who said it, and the words that were
+  found: by meaning, the window of the answer that matched, not its start. The brief the
+  graph gives each agent is not searched, a sentence said in several runs shows once, and
+  by meaning the group's own question, asked to you before, does not come back with your
+  answer to it. By words it still can: skip it.
+- `sql "<SELECT>"` reads only. `tables` lists the tables and four example SELECTs.
+- `eval "<question>"` makes two model calls, the model with no tools: it prints the answer
+  without, what was found, and the answer with.
+- Before the day is kept, `ask`, `eval` and `sql` read the example team and say so; after,
+  only the group's day, unless `--example`.
+- It needs `sqlite3`. If it is missing, say so in plain words; the person running the room
+  helps.
 
 ## Questions they may ask
 
@@ -161,6 +352,6 @@ it only when the group's own runs are too few to ask about.
   it.
 - **Why keep the raw conversations if we have a summary?** Distil on top of the source,
   never instead of it: a summary can be wrong, the source can be checked.
-- **Do we need a vector database?** Not here: a SQLite file on the laptop holds the
-  pieces and their vectors, and a 23 MB model on the laptop makes them. The steps are the
-  same at any size; a vector database is for millions of pieces.
+- **Do we need a vector database?** Not here: one small file on this laptop holds their
+  day, and a small model on the laptop finds things by meaning. The steps are the same at
+  any size; a vector database is for millions of conversations.

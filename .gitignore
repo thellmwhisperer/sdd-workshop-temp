@@ -10,4 +10,5 @@ workshop/hooks/.panel/
 **/memory/.embed.json
 **/memory/.vectors.sql
 **/memory/.near.json
+**/memory/.asked.txt
 **/memory/.empty/
