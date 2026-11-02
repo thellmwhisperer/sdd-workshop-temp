@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>stock</title>
+</head>
+<body>
+<pre id="result"></pre>
+<script src="check.js"></script>
+<script src="../stock.js"></script>
+<script>
+var blackM = { product: "jacket", size: "M", colour: "black" };
+var blackL = { product: "jacket", size: "L", colour: "black" };
+var navyM = { product: "jacket", size: "M", colour: "navy" };
+
+var s1 = setCount(setCount(emptyStock(), "Old town", blackM, 2), "Old town", blackL, 1);
+check("1.1 sizes are counted apart: black M", countOf(s1, "Old town", blackM), 2);
+check("1.1 sizes are counted apart: black L", countOf(s1, "Old town", blackL), 1);
+
+var s2 = setCount(emptyStock(), "Old town", blackM, 1);
+check("1.2 colours are counted apart: black M", countOf(s2, "Old town", blackM), 1);
+check("1.2 colours are counted apart: navy M is 0", countOf(s2, "Old town", navyM), 0);
+
+var s3 = setCount(emptyStock(), "Old town", blackM, 3);
+checkThrows("1.3 a count below zero throws", function () {
+  setCount(s3, "Old town", blackM, -1);
+}, "below zero");
+check("1.3 the count stays as it was", countOf(s3, "Old town", blackM), 3);
+</script>
+</body>
+</html>
