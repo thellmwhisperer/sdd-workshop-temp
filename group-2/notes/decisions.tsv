@@ -24,3 +24,4 @@ when	who	what	why	evidence
 2026-11-02 22:43	group 2	The reviewer may block on tests and lint only, not design	not given	.github/skills/reviewer/SKILL.md
 2026-11-02 22:44	group 2	A person merges the pull request (no auto merge)	not given	graph/path.jsonl, deliver line
 2026-11-02 22:48	group 2	Fix the node path bug (prefix of a subfolder repo) with a worker, ticket 009, test first	not given	tickets/009-node-in-a-subfolder.md
+2026-11-02 23:01	group 2	Auto merge from ticket 003 on: the deliver line squash-merges the PR; the next ticket starts only after the publish workflow on main is green; a red run stops the chain and a person decides	not given	graph/path.jsonl, deliver line
