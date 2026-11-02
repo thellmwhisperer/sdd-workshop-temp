@@ -47,7 +47,7 @@ for; single products is much simpler to keep.
 
 What we know: 7 in 10 questions are about a size or a colour.
 
-**Decision:** _pending_
+**Decision:** Each product per size and colour (reason: not given).
 
 ### 2. How long a reservation lasts
 
@@ -57,7 +57,7 @@ time to come.
 What we know: 8 in 10 customers come within two days; 3 in 10 sticky-note boxes are never
 collected.
 
-**Decision:** _pending_
+**Decision:** 48 hours (reason: not given).
 
 ### 3. Who can reserve
 
@@ -66,4 +66,12 @@ reservations nobody follows up.
 
 What we know: Managers are on the floor only two days a week.
 
-**Decision:** _pending_
+**Decision:** Any staff member (reason: not given).
+
+### 4. One page or two
+
+Raised by the group: are stock and reservations two sites, or two pages of one site? One
+site, the app in `app/`. One page keeps checking and reserving together at the counter;
+two pages keep a long reservations list away from the stock.
+
+**Decision:** One page, stock and reservations together (reason: not given; the chief recommended it).

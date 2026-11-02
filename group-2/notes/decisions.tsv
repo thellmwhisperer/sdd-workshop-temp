@@ -1,1 +1,25 @@
 when	who	what	why	evidence
+2026-11-02 22:09	group 2	Unit of stock: each product per size and colour	not given	DOMAIN.md, decision 1
+2026-11-02 22:09	group 2	A reservation lasts 48 hours	not given	DOMAIN.md, decision 2
+2026-11-02 22:10	group 2	Any staff member can reserve	not given	DOMAIN.md, decision 3
+2026-11-02 22:14	group 2	One page for stock and reservations	not given (chief recommended it)	DOMAIN.md, decision 4
+2026-11-02 22:14	group 2	Data lives in browser storage (localStorage), starting data in a JS file; shops do not share data yet	"for the purpose of the module, we'll use browser storage"	design.md, Where the data lives
+2026-11-02 22:16	group 2	The four shops: Old town, Graslin, Île de Nantes, Chantenay	not given (chief proposed the names)	design.md, The four shops
+2026-11-02 22:16	group 2	Staff set the count of a variant for their shop on the page; never below zero (1.3)	not given	design.md, How stock is entered; shop-stock 1.3
+2026-11-02 22:17	group 2	Reservations can be collected (units leave stock) or cancelled (units freed); an ended one cannot be collected	not given	reservations spec, 7.1-7.3
+2026-11-02 22:17	group 2	Only the sizes and colours a product comes in are offered	not given	shop-stock spec, 3.3
+2026-11-02 22:18	group 2	The page shows each reservation: customer, variant, shop, units, end time	not given	reservations spec, 6.3
+2026-11-02 22:18	group 2	A reservation for 0 units is refused	not given	reservations spec, 5.3
+2026-11-02 22:23	group 2	The sandal comes in sizes 38 and 39	not given; the chief proposed it	tickets/005, CONTEXT
+2026-11-02 22:24	group 2	Tickets 003 (reserve) and 004 (never more than free) merged into one ticket, 003; the later tickets renumbered 004 to 008	not given; the chief recommended keeping them apart	tickets/003
+2026-11-02 22:27	group 2	The backlog of 8 tickets (001 to 008) is ready	"all good"	tickets/backlog-ready.md
+2026-11-02 22:30	group 2	agent time limit: 5 minutes (limit 300 s)	reason: not given	tickets/000-node.md
+2026-11-02 22:30	group 2	the agent may touch app/ only (dir app; graph/runs/ stays allowed for its report)	reason: not given	tickets/000-node.md
+2026-11-02 22:30	group 2	an agent that ends without a report is red	reason: not given	tickets/000-node.md
+2026-11-02 22:31	group 2	ticket 000 (the node) approved and signed	"looks good to me"	tickets/000-node.md
+2026-11-02 22:34	group 2	ticket 000 amended: the malformed-job cases start from a clean app/ in the throwaway folder; the node never reverts an agent's work; new worker, test first	chose the amendment over the rescue; the first test was wrong, case 3 left app/fake-other.txt behind	tickets/000-node.md, ACCEPTANCE 6
+2026-11-02 22:37	group 2	ticket 000 amended again: the test keeps its before/after listings outside the folder it lists; new worker, test first	chose the amendment over the rescue; the second test counted its own after.txt as written by the node	tickets/000-node.md, ACCEPTANCE 6
+2026-11-02 22:41	group 2	the node (graph/node.sh) and its test accepted: 47 ok, read by the group	"looks good"	graph/runs/test-node.log
+2026-11-02 22:43	group 2	Rounds before a person: 2 (on the check and review lines)	not given	graph/path.jsonl, rounds
+2026-11-02 22:43	group 2	The reviewer may block on tests and lint only, not design	not given	.github/skills/reviewer/SKILL.md
+2026-11-02 22:44	group 2	A person merges the pull request (no auto merge)	not given	graph/path.jsonl, deliver line
