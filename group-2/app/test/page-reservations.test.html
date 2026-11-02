@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>page reservations</title>
+</head>
+<body>
+<pre id="result"></pre>
+<div id="app"></div>
+<script src="check.js"></script>
+<script src="../stock.js"></script>
+<script src="../reservations.js"></script>
+<script src="../data.js"></script>
+<script src="../page.js"></script>
+<script>
+var HOUR = 60 * 60 * 1000;
+var NOW = 1000 * HOUR;
+var blackM = { product: "jacket", size: "M", colour: "black" };
+
+function makeStorage(state) {
+  var memory = {};
+  var storage = {
+    getItem: function (k) { return Object.prototype.hasOwnProperty.call(memory, k) ? memory[k] : null; },
+    setItem: function (k, v) { memory[k] = String(v); }
+  };
+  saveState(storage, state);
+  return storage;
+}
+function reservation(id, customer, units, madeAt) {
+  return { id: id, shop: "Graslin", product: "jacket", size: "M", colour: "black",
+    units: units, customer: customer, madeAt: madeAt, status: "active" };
+}
+function open(stockCount, reservations) {
+  var storage = makeStorage({ stock: setCount(emptyStock(), "Graslin", blackM, stockCount),
+    reservations: reservations });
+  var root = document.getElementById("app");
+  startPage(root, storage, function () { return NOW; });
+  return { root: root, storage: storage };
+}
+function graslinFree(root) {
+  return root.querySelector("[data-shop='Graslin'] .free").textContent;
+}
+function ids(root) {
+  return Array.prototype.map.call(root.querySelectorAll(".reservations li"), function (li) {
+    return li.getAttribute("data-id");
+  });
+}
+
+var made = NOW - 10 * HOUR;
+var page = open(2, [reservation("r1", "Claire Martin", 1, made)]);
+var li = page.root.querySelector(".reservations li[data-id=r1]");
+var text = li ? li.textContent : "";
+var ends = new Date(made + 48 * HOUR).toLocaleString();
+check("6.3 an active reservation shows the name, variant, shop, units and end",
+  [text.indexOf("Claire Martin") >= 0, text.indexOf("jacket") >= 0, text.indexOf("M") >= 0,
+   text.indexOf("black") >= 0, text.indexOf("Graslin") >= 0,
+   li && li.querySelector(".units").textContent, text.indexOf(ends) >= 0],
+  [true, true, true, true, true, "1", true]);
+
+page = open(2, [reservation("r1", "Claire Martin", 1, made)]);
+page.root.querySelector(".reservations li[data-id=r1] button.collect").click();
+check("7.1 collecting 1 removes it from the list and Graslin has 1 in stock",
+  [ids(page.root), countOf(loadState(page.storage).stock, "Graslin", blackM),
+   loadState(page.storage).reservations[0].status],
+  [[], 1, "collected"]);
+
+page = open(2, [reservation("r1", "Claire Martin", 1, made)]);
+var before = graslinFree(page.root);
+page.root.querySelector(".reservations li[data-id=r1] button.cancel").click();
+check("7.2 cancelling 1 removes it from the list and Graslin shows 2 free",
+  [before, ids(page.root), graslinFree(page.root), loadState(page.storage).reservations[0].status],
+  ["1", [], "2", "cancelled"]);
+
+page = open(2, [reservation("r1", "Claire Martin", 1, NOW - 48 * HOUR)]);
+check("6.2 a reservation made 48 hours before now is not listed and has no collect button",
+  [ids(page.root), page.root.querySelectorAll("button.collect").length], [[], 0]);
+</script>
+</body>
+</html>
