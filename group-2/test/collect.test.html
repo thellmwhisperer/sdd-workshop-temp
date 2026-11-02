@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>collect</title>
+</head>
+<body>
+<pre id="result"></pre>
+<script src="check.js"></script>
+<script src="../stock.js"></script>
+<script src="../reservations.js"></script>
+<script>
+var now = 1000 * 60 * 60 * 1000;
+var hour = 60 * 60 * 1000;
+var blackM = { product: "jacket", size: "M", colour: "black" };
+var stock = setCount(emptyStock(), "Graslin", blackM, 2);
+
+function request(units, customer) {
+  return { shop: "Graslin", product: "jacket", size: "M", colour: "black",
+    units: units, customer: customer };
+}
+
+var held = reserve(stock, [], request(1, "Claire Martin"), now);
+var done = collect(stock, held, "r1", now + hour);
+check("7.1 the reservation is collected", done.reservations[0].status, "collected");
+check("7.1 the reservation has ended", isActive(done.reservations[0], now + hour), false);
+check("7.1 countOf gives 1", countOf(done.stock, "Graslin", blackM), 1);
+check("7.1 freeUnits stays 1", freeUnits(done.stock, done.reservations, "Graslin", blackM, now + hour), 1);
+check("7.1 the stock given is unchanged", countOf(stock, "Graslin", blackM), 2);
+check("7.1 the list given is unchanged", held[0].status, "active");
+
+check("7.2 freeUnits shows 1 with the reservation", freeUnits(stock, held, "Graslin", blackM, now), 1);
+var cancelled = cancel(held, "r1", now + hour);
+check("7.2 the reservation is cancelled", cancelled[0].status, "cancelled");
+check("7.2 the reservation has ended", isActive(cancelled[0], now + hour), false);
+check("7.2 freeUnits gives 2", freeUnits(stock, cancelled, "Graslin", blackM, now + hour), 2);
+check("7.2 the list given is unchanged", held[0].status, "active");
+
+var expiredAt = now + 48 * hour;
+checkThrows("7.3 collecting an expired reservation throws", function () {
+  collect(stock, held, "r1", expiredAt);
+}, "not active");
+check("7.3 the stock does not change", countOf(stock, "Graslin", blackM), 2);
+checkThrows("7.3 collecting a cancelled reservation throws", function () {
+  collect(stock, cancelled, "r1", now + hour);
+}, "not active");
+check("7.3 the stock still does not change", countOf(stock, "Graslin", blackM), 2);
+checkThrows("7.3 cancelling a cancelled reservation throws", function () {
+  cancel(cancelled, "r1", now + hour);
+}, "not active");
+</script>
+</body>
+</html>
