@@ -126,6 +126,52 @@ function startPage(root, storage, now) {
       list.appendChild(li);
     });
     root.appendChild(list);
+    root.appendChild(reservationList());
+  }
+
+  // reservationList(): every active reservation with its end, a collect and a cancel button.
+  function reservationList() {
+    var list = make("ul", "reservations");
+    state.reservations.filter(function (r) {
+      return isActive(r, now());
+    }).forEach(function (r) {
+      var li = make("li");
+      li.setAttribute("data-id", r.id);
+      li.appendChild(make("span", "customer", r.customer));
+      li.appendChild(make("span", "", " · " + r.product + " " + r.size + " " + r.colour + " · "));
+      li.appendChild(make("span", "shop", r.shop));
+      li.appendChild(make("span", "", " · "));
+      li.appendChild(make("span", "units", String(r.units)));
+      li.appendChild(make("span", "", " units · ends "));
+      li.appendChild(make("span", "ends", new Date(r.madeAt + RESERVATION_MS).toLocaleString()));
+      li.appendChild(make("span", "", " "));
+      li.appendChild(actionButton("collect", "Collected", function () {
+        var done = collect(state.stock, state.reservations, r.id, now());
+        state = { stock: done.stock, reservations: done.reservations };
+      }));
+      li.appendChild(actionButton("cancel", "Cancel", function () {
+        state = { stock: state.stock, reservations: cancel(state.reservations, r.id, now()) };
+      }));
+      list.appendChild(li);
+    });
+    return list;
+  }
+
+  // actionButton(className, label, change): a button that runs change, saves, and draws again.
+  function actionButton(className, label, change) {
+    var button = make("button", className, label);
+    button.type = "button";
+    button.addEventListener("click", function () {
+      try {
+        change();
+        saveState(storage, state);
+        message = "";
+      } catch (e) {
+        message = e.message;
+      }
+      draw();
+    });
+    return button;
   }
 
   draw();
