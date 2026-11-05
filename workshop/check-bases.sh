@@ -5,6 +5,8 @@
 # Needs Chrome or Edge on the machine (or BROWSER=<path to one>): the app's tests are pages
 # that app/check.sh test opens in the browser without a window.
 # Usage: sh workshop/check-bases.sh [--openspec]   (--openspec also validates the specs)
+#        sh workshop/check-bases.sh --folder workshop/inputs/hour-4/step-<N>   (one of
+#        Northbank's folders of hour 4, on a copy)
 set -eu
 . "$(dirname "$0")/lib.sh"
 scratch="$workshop/.check"
@@ -75,9 +77,9 @@ path_ok() {
     json_valid "$1/graph/path.jsonl"
   ) && [ "$(grep -cE '"kind":"(commands|agent)"' "$1/graph/path.jsonl")" -eq 5 ]
 }
-# smoke_run <dir>: the path of the base, with the fake agent in steps 2 and 4 and true for
-# step 5 (no push), on ticket 001, in a throwaway git repository so step 1 makes the run's
-# copy. True when the run ends green.
+# smoke_run <dir> [ticket number]: the path of the base, with the fake agent in steps 2 and
+# 4 and true for step 5 (no push), on ticket 001 or the one named, in a throwaway git
+# repository so step 1 makes the run's copy. True when the run ends green.
 smoke_run() {
   (
     cd "$1"
@@ -85,9 +87,41 @@ smoke_run() {
       -e '5s|"run":"[^"]*"|"run":"true"|' graph/path.jsonl > graph/path.smoke
     mv graph/path.smoke graph/path.jsonl
     git init -q && git add -A && git -c user.name=check -c user.email=check@example.invalid commit -qm base
-    sh graph/run.sh tickets/001-*.md
+    sh graph/run.sh tickets/"${2:-001}"-*.md
   ) > /dev/null 2>&1 < /dev/null
 }
+# runnable <dir> <ticket number>: what a folder needs to take a ticket through the five
+# steps on its own: the skills, the path, the graph's tests, the app's checks, a full brief
+# and a run with the fake agent that ends green. The start of hour 4 of every domain and
+# each of Northbank's folders of hour 4 (--folder) are checked with it.
+runnable() {
+  check 'worker and reviewer skills' skills_ok "$1"
+  check 'the reviewer skill ends with a Verdict line' grep -q 'Verdict: block' "$1/.github/skills/reviewer/SKILL.md"
+  check 'path.jsonl has five steps, each a JSON line with a kind' path_ok "$1"
+  check 'test-run.sh is green' green "$1/graph/tests/test-run.sh"
+  check 'the deliver line of the path calls pr.sh' grep -q 'sh graph/pr.sh <ticket> <run>' "$1/graph/path.jsonl"
+  check 'every test of the graph is green' green "$1/graph/tests/run-all.sh"
+  check 'every ticket is a full brief' sections_ok "$1"
+  check 'the app test passes' in_app "$1" test
+  check 'the app lint passes' in_app "$1" lint
+  check 'the app typecheck passes' in_app "$1" typecheck
+  check "a run of ticket $2 with the fake agent ends green" smoke_run "$1" "$2"
+}
+
+# --folder <folder>: one of Northbank's folders of hour 4 (workshop/inputs/hour-4/step-N),
+# checked on a copy, so the smoke run's git repository never lands in the folder itself.
+if [ "${1:-}" = --folder ]; then
+  src=${2:?usage: sh workshop/check-bases.sh --folder <folder>}
+  copy="$scratch/folder/$(basename "$src")"
+  mkdir -p "$scratch/folder"
+  cp -R "$src" "$copy"
+  echo "$src: a folder of hour 4 that runs ticket 010 on its own"
+  check 'DOMAIN.md and STANDING.md' [ -s "$copy/DOMAIN.md" -a -s "$copy/STANDING.md" ]
+  runnable "$copy" 010
+  rm -rf "$scratch"
+  if [ "$fail" -eq 0 ]; then echo 'the folder is as expected'; fi
+  exit "$fail"
+fi
 
 # openspec_valid <change dir>: the change has proposal.md, tasks.md and at least one
 # specs/*/spec.md; every spec has requirements; every requirement has at least one
@@ -281,14 +315,9 @@ while read -r group domain; do
   build_base "$d4" "$domain" 4
   check 'one ticket for the graph: 000-node.md, signed' \
     sh -c "[ $(count "$d4/tickets" '^000-.*\.md$') -eq 1 ] && ! grep -q '^Signed: _pending_' '$d4'/tickets/000-*.md"
-  check 'worker and reviewer skills' skills_ok "$d4"
-  check 'the reviewer skill ends with a Verdict line' grep -q 'Verdict: block' "$d4/.github/skills/reviewer/SKILL.md"
-  check 'path.jsonl has five steps, each a JSON line with a kind' path_ok "$d4"
-  check 'test-run.sh is green' green "$d4/graph/tests/test-run.sh"
-  check 'the deliver line of the path calls pr.sh' grep -q 'sh graph/pr.sh <ticket> <run>' "$d4/graph/path.jsonl"
-  check 'every test of the graph is green' green "$d4/graph/tests/run-all.sh"
   check 'the memory tool, its cases and the example team' memory_ok "$d4"
-  check 'a run of ticket 001 with the fake agent ends green' smoke_run "$d4"
+  check "Northbank's folders of hour 4 stay where they are: none in the group folder" [ ! -e "$d4/step-1" ]
+  runnable "$d4" 001
   hour_mark "$d4" 3
   check 'status says hour 3 is finished' finished "$d4"
   hour_mark "$d4" 4

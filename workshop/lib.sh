@@ -21,11 +21,12 @@ domain_of() {
 }
 
 # add_inputs <group-dir> <hour>: copies what that hour starts with into the group folder,
-# file by file, never overwriting a file the group already has.
+# file by file, never overwriting a file the group already has. Hour 4's step-1 to step-4
+# are Northbank's own folders, opened where they are: they never go into a group folder.
 add_inputs() {
   ai_src="$workshop/inputs/hour-$2"
   [ -d "$ai_src" ] || return 0
-  (cd "$ai_src" && find . -type f) | while read -r f; do
+  (cd "$ai_src" && find . -path './step-*' -prune -o -type f -print) | while read -r f; do
     [ -e "$1/$f" ] && continue
     mkdir -p "$(dirname "$1/$f")"
     cp "$ai_src/$f" "$1/$f"
