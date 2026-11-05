@@ -15,7 +15,7 @@ The same drawing as an image: `graph/path.png`.
 ## `graph/path.jsonl`
 
 ```
-{"step":1,"name":"prepare","kind":"commands","dir":".","run":"git worktree add <workspace> -b <run>","on_red":"stop"}
+{"step":1,"name":"prepare","kind":"commands","dir":".","run":"sh graph/copy.sh <workspace> <run>","on_red":"stop"}
 {"step":2,"name":"work","kind":"agent","dir":"app","skill":"worker","agent":"graph/copilot.sh","limit":300,"on_red":"stop"}
 {"step":3,"name":"check","kind":"commands","dir":"app","run":"sh app/check.sh lint && sh app/check.sh test","on_red":2,"rounds":2}
 {"step":4,"name":"review","kind":"agent","dir":"app","skill":"reviewer","agent":"graph/copilot.sh","limit":180,"on_red":2,"rounds":2}
@@ -35,9 +35,12 @@ repository the run works on. Nothing in it is overwritten. The same ticket launc
 while its first run still goes is `<ticket>-2`, with its own folder, its own copy and its
 own branch; launched after its run stopped halfway, it picks that run up (below).
 
-- **Step 1 makes the copy**: `git worktree add graph/runs/<run>/workspace -b <run>`, a
-  git worktree from the last commit, on a branch named after the run. If that branch or
-  that folder already exists, git refuses and step 1 is red: nothing is touched.
+- **Step 1 makes the copy**: `sh graph/copy.sh graph/runs/<run>/workspace <run>`, given
+  like `run.sh`. The copy is an isolated clone, as ATM makes one for every run: its own
+  `.git`, from the last commit, on a branch named after the run that lives only in the
+  clone. The repository gets no branch and no worktree from a run, so no other run, session
+  or copy of the repository ever meets it. The clone's `origin` is the repository's, so
+  step 5 pushes there. If the folder already exists, step 1 is red: nothing is touched.
 - **Every later step runs inside the copy**, in the group's folder there. `dir`, `ticket`,
   `agent` and the skills are read from the copy; `app/` in the group folder never changes
   while a run goes. The step's own folder stays in `graph/runs/<run>/`, outside the copy.
@@ -59,8 +62,9 @@ own branch; launched after its run stopped halfway, it picks that run up (below)
   report of the first agent step; the reviewer's verdict and notes, from the report of the
   last one; how many times the run went back, from the journal) and opens the pull request
   with that title and that text. A pull request made with `gh pr create --fill` carried
-  only the commit's name. After green, `run.sh` removes the copy (it is all on the
-  branch). After red it keeps it, for the person who decides.
+  only the commit's name. After green, `run.sh` removes the copy once its branch is
+  pushed (it is all on the remote); a green run that pushed nothing keeps it, the only place
+  its branch lives. After red it keeps it, for the person who decides.
 
 ## `graph/run.sh`
 
@@ -80,7 +84,7 @@ own branch; launched after its run stopped halfway, it picks that run up (below)
    `sh graph/node.sh <that folder>`, from inside the copy when it exists, else from the
    group folder. A green step 1 that left no copy at `<workspace>` is red.
 3. Green: the next step. After the last step green, the run is green and the copy is
-   removed.
+   removed when its branch was pushed.
    The terminal, for the people watching: one bold line when each step starts
    (`── step 3 of 5: check (commands, round 2) ──`), the node's `green:` or `red:` line with
    its mark (✓ blue, ✗ orange: a colour-blind person tells them apart), `↩ back to step 2,
@@ -104,20 +108,23 @@ rounds used.
 
 ## The test: `graph/tests/test-run.sh`
 
-A throwaway group folder with the real `node.sh`, `run.sh`, `pr.sh`, `state.sh` and `lib.sh`; a path
+A throwaway group folder with the real `node.sh`, `run.sh`, `copy.sh`, `pr.sh`, `state.sh` and `lib.sh`; a path
 of five steps where step 3 is `test -f app/fixed` and the agent is
 `graph/tests/fake-agent.sh`; a local bare repository as `origin` and a `gh` that only writes
 what it was asked. Nothing reaches a model or GitHub.
 
 - The ticket `fix.md`: 1, 2, 3 red, back to 2 (round 1), 3 green, 4, 5 green; the journal
   has the `back` event; `state.sh` prints the steps and the round; the branch `fix` on the
-  remote has `app/fixed` and the group folder's `app/` does not; the copy is gone; `pr.md`
+  remote has `app/fixed` and the group folder's `app/` does not; the repository got no
+  branch and no worktree; the copy is gone; `pr.md`
   of the run has the ticket's goal, the worker's change and the reviewer's line, and `gh`
   was asked for that title and that file.
 - `rounds` 1 and an agent that never fixes: the run ends red, "a person decides", and the
   copy is kept.
 - `on_red` `"stop"` on a red step 1: the run ends at once.
-- A branch that already exists: step 1 red, nothing made.
+- A branch named like the run already in the repository, and no run folder (a fresh copy
+  of the repository that has the branches of earlier runs): the run goes green, and the
+  repository's branches do not change.
 - Uncommitted changes in the group folder: refused before any run folder exists.
 - The same ticket twice at once: two runs, two branches, both green.
 - A run cut in step 3 (its `run.sh` killed): launched again, it says where it picked up,

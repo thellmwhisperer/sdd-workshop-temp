@@ -21,14 +21,20 @@ git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
 # publish: one attempt. Exit 0 published or nothing to publish, 1 the push was refused.
 publish() {
-  # The site as it is now, or a new empty branch the first time.
+  # The site as it is now, or a new empty branch the first time, in an isolated clone: no
+  # worktree, no branch added to this checkout. The push goes from this checkout, which
+  # holds the workflow's credentials.
+  top=$(git rev-parse --show-toplevel)
+  rm -rf "$site"
   if git ls-remote --exit-code --heads origin gh-pages > /dev/null 2>&1; then
     git fetch -q origin gh-pages
-    git worktree add -q --detach "$site" FETCH_HEAD
+    at=$(git rev-parse FETCH_HEAD)
+    git clone -q --local --no-checkout "$top" "$site"
+    git -C "$site" checkout -q --detach "$at"
   else
-    git worktree add -q --detach "$site"
+    git clone -q --local --no-checkout "$top" "$site"
     git -C "$site" checkout -q --orphan gh-pages
-    git -C "$site" rm -rqf .
+    git -C "$site" rm -rqf . 2> /dev/null || true
   fi
 
   # This group's folder, replaced by its app as merged; the browser's test profile is not part of it.
@@ -60,13 +66,14 @@ publish() {
     printf '%s: the site already has this app, nothing to publish\n' "$group"
   else
     git -C "$site" commit -qm "$group: app of ${GITHUB_SHA:-$(git rev-parse --short HEAD)}"
-    if git -C "$site" push -q origin HEAD:gh-pages; then
+    git fetch -q "$site" HEAD
+    if git push -q origin FETCH_HEAD:refs/heads/gh-pages; then
       printf '%s published\n' "$group"
     else
       status=1
     fi
   fi
-  git worktree remove --force "$site"
+  rm -rf "$site"
   return $status
 }
 

@@ -2,9 +2,10 @@
 # The path: sh graph/run.sh tickets/<ticket>.md, from the group folder.
 # Walks graph/path.jsonl, one step per line, each through the node (graph/node.sh) in a
 # folder of its own: graph/runs/<run>/step-<N>-<name>/. A new run is a new folder:
-# <ticket>, then <ticket>-2, -3. Step 1 gives the run its own copy of the repository, a git
-# worktree at graph/runs/<run>/workspace/ on a branch named after the run, and every later
-# step runs inside that copy: runs share no files and no branch, so several can go at once.
+# <ticket>, then <ticket>-2, -3. Step 1 gives the run its own copy of the repository, an
+# isolated clone at graph/runs/<run>/workspace/ (graph/copy.sh) on a branch named after the
+# run that lives only in the clone, and every later step runs inside that copy: runs share
+# no files and no branch, and leave none in the repository, so several can go at once.
 # Green: the next step. Red: the step's on_red says where to go: "stop" ends the run, a
 # number goes back to that step, at most `rounds` times (2 by default); then a person
 # decides. Every event is one line of graph/runs/<run>/journal.jsonl, appended, never
@@ -86,12 +87,14 @@ here=$(pwd)
 # The group folder inside the copy: the same path from the root of the repository.
 inside=$workspace/$(git rev-parse --show-prefix 2> /dev/null || true)
 
-# finish <green|red> <why>: the last event of the run. After green the copy goes, it is all
-# on the branch; after red it stays, for the person who decides.
+# finish <green|red> <why>: the last event of the run. After green the copy goes once its
+# branch is pushed: the work is on the remote. A green run whose branch was not pushed keeps
+# its copy, the only place its branch lives; after red it stays, for the person who decides.
 finish() {
   copy=''
   if [ -d "$workspace" ]; then
-    if [ "$1" = green ] && git worktree remove --force "$workspace" > /dev/null 2>&1; then
+    if [ "$1" = green ] && git -C "$workspace" rev-parse --abbrev-ref '@{upstream}' > /dev/null 2>&1 &&
+      rm -rf "$workspace"; then
       copy=removed
     else
       copy="kept at $workspace"
@@ -103,8 +106,14 @@ finish() {
   printf '\n%s%s run %s: %s%s: %s\n' "$bold" "$mark_" "$run" "$1" "$off" "$2"
   if [ -f "$run/pr.url" ]; then printf '  pull request: %s\n' "$(cat "$run/pr.url")"; fi
   case $copy in
-    removed) printf '  the work is on branch %s; the copy is removed\n' "$id" ;;
-    kept*) printf '  the copy is %s: a person decides\n' "$copy" ;;
+    removed) printf '  the work is on branch %s of the remote; the copy is removed\n' "$id" ;;
+    kept*)
+      if [ "$1" = green ]; then
+        printf '  the work is on branch %s, in the copy %s\n' "$id" "$copy"
+      else
+        printf '  the copy is %s: a person decides\n' "$copy"
+      fi
+      ;;
   esac
   printf '  journal: sh graph/state.sh %s\n' "$run"
   if [ "$1" = green ]; then exit 0; fi

@@ -25,7 +25,7 @@ check() { # check <description> <condition...>
 g="$scratch/group"
 mkdir -p "$g/graph/tests" "$g/app" "$g/tickets" "$scratch/bin" \
   "$g/.github/skills/worker" "$g/.github/skills/reviewer"
-cp "$graph/node.sh" "$graph/run.sh" "$graph/pr.sh" "$graph/state.sh" "$graph/lib.sh" "$g/graph/"
+cp "$graph/node.sh" "$graph/run.sh" "$graph/copy.sh" "$graph/pr.sh" "$graph/state.sh" "$graph/lib.sh" "$g/graph/"
 cp "$here/fake-agent.sh" "$g/graph/tests/"
 printf 'How a worker works here.\n' > "$g/.github/skills/worker/SKILL.md"
 printf 'What a reviewer may block here.\n' > "$g/.github/skills/reviewer/SKILL.md"
@@ -60,7 +60,9 @@ path() {
   git -C "$g" add -A
   git -C "$g" commit -q -m "path" > /dev/null 2>&1 || true
 }
-prepare='git worktree add <workspace> -b <run>'
+prepare='sh graph/copy.sh <workspace> <run>'
+# branches: the branches of the group's own repository, one per line.
+branches() { git -C "$g" for-each-ref --format='%(refname:short)' refs/heads; }
 # run <name> <ticket>: runs the path from the group folder; its exit code goes to
 # <name>.code and what it printed to <name>.out.
 run() {
@@ -85,6 +87,7 @@ on_remote() { git --git-dir="$scratch/origin.git" cat-file -e "$1:$2" 2> /dev/nu
 
 echo 'scenario: five steps, back to the worker once, then green, in the run'"'"'s own copy'
 path 2 "$prepare"
+before=$(branches)
 run fix fix
 r="$g/graph/runs/fix"
 check 'the run exits 0 and says green' sh -c "[ $(code fix) -eq 0 ] && grep -q 'run graph/runs/fix: green' '$scratch/fix.out'"
@@ -99,7 +102,9 @@ check 'input.json of step 2 has the ticket, and no last on the first visit' \
 check 'the second visit of step 2 has the red step as last, a full path' said "$r/step-2-work-r2/input.json" "\"last\":\"$g/graph/runs/fix/step-3-check\""
 check 'a commands step gets no ticket' sh -c "! grep -q '\"ticket\"' '$r/step-3-check/input.json'"
 check '<ticket> is replaced by the ticket name' said "$r/step-5-deliver/input.json" 'git commit -qm fix &&'
-check '<workspace> and <run> are replaced in step 1' said "$r/step-1-prepare/input.json" '"run":"git worktree add graph/runs/fix/workspace -b fix"'
+check '<workspace> and <run> are replaced in step 1' said "$r/step-1-prepare/input.json" '"run":"sh graph/copy.sh graph/runs/fix/workspace fix"'
+check 'the copy was an isolated clone: the repository got no branch and no worktree' \
+  sh -c "[ \"\$(git -C '$g' for-each-ref --format='%(refname:short)' refs/heads)\" = '$before' ] && [ \"\$(git -C '$g' worktree list | grep -c .)\" -eq 1 ]"
 check 'step 5 pushed the branch of the run to the remote' git --git-dir="$scratch/origin.git" show-ref --verify -q refs/heads/fix
 check 'the work is on that branch: app/fixed' on_remote fix app/fixed
 check 'the group folder'"'"'s app/ did not change' test ! -e "$g/app/fixed"
@@ -148,15 +153,15 @@ status=0
 (cd "$g" && sh graph/state.sh graph/runs/never) > "$scratch/state-never.out" 2>&1 || status=$?
 check 'state.sh: exit 1, finished red' sh -c "[ $status -eq 1 ] && grep -q 'finished red: step 3 red after 1 rounds' '$scratch/state-never.out'"
 
-echo 'scenario: a branch that already exists: step 1 red, nothing made'
-path 2 "$prepare"
+echo 'scenario: a fresh copy of the repository with a branch named like the run, and no run folder'
+path 2 "$prepare" 'test -f app/fake-taken.txt'
 git -C "$g" branch taken
+before=$(branches)
 run taken taken
 r="$g/graph/runs/taken"
-check 'the run exits 1' [ "$(code taken)" -eq 1 ]
-check 'only step 1 ran' [ "$(visits taken)" = '1 ' ]
-check 'it ends red, naming step 1' said "$r/journal.jsonl" '"status":"red","why":"step 1 prepare red: commands failed'
-check 'no copy was made' test ! -e "$r/workspace"
+check 'the run exits 0: a branch of the repository never stops a run' [ "$(code taken)" -eq 0 ]
+check 'all five steps ran' [ "$(visits taken)" = '1 2 3 4 5 ' ]
+check 'the repository'"'"'s branches did not change' [ "$(branches)" = "$before" ]
 
 echo 'scenario: uncommitted changes in the group folder: refused before any run folder'
 printf 'not committed\n' > "$g/app/draft.txt"

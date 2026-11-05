@@ -41,7 +41,7 @@ row, "decides" or "builds"; a step that fits neither is not yours to do.
 |---|---|---|---|---|---|
 | 1 · The chief of staff | What did your chief ask that you had not decided? | `DOMAIN.md` with its open decisions; you | The decisions; the ACCEPTANCE numbers; when the backlog is ready | The product's change and its tickets, `001` onwards | None: a half backlog is still a backlog |
 | 2 · The graph loop | What did your node forbid the agent to do, and how did it know? | `graph/NODE.md`, `REPORT.md`, `copilot.sh`, `tests/fake-agent.sh`; `graph/node.sh` as a stub; `tickets/000-node.md` to complete; the tickets of hour 1 | How long the agent may run; which folder it may touch; whether no report is red | `graph/node.sh` and `graph/tests/test-node.sh`, six cases green, read and run by the group. No real agent yet: the node has only met the fake one | The prepared base of hour 3: the node and its test green |
-| 3 · Skills, context and tools | What did your reviewer block, and was it right? | The node green; `graph/PATH.md` and its drawing; `graph/run.sh`, the loop that walks the path, with its test green; `graph/pr.sh`, which writes the pull request from the run | How many rounds before a person; what the reviewer may block; a person merges or CI does | `graph/path.jsonl` and the worker and reviewer skills; then ticket 001 through the five steps, the first time the node meets a real agent, each run in its own copy of the repository and its own branch; ticket 002 whenever they want, even at the same time | The prepared base of hour 4: path, skills and loop done, every test green |
+| 3 · Skills, context and tools | What did your reviewer block, and was it right? | The node green; `graph/PATH.md` and its drawing; `graph/run.sh`, the loop that walks the path, with its test green; `graph/copy.sh`, which gives each run its isolated clone; `graph/pr.sh`, which writes the pull request from the run | How many rounds before a person; what the reviewer may block; a person merges or CI does | `graph/path.jsonl` and the worker and reviewer skills; then ticket 001 through the five steps, the first time the node meets a real agent, each run in its own copy of the repository and its own branch; ticket 002 whenever they want, even at the same time | The prepared base of hour 4: path, skills and loop done, every test green |
 | 4 · Memory that improves the system | Same ticket, four runs: what did the worker know each time, and where did it come from? | Northbank, a prepared world: four folders, `step-1` to `step-4`, each with ticket 010, its graph and its own copy of the memory tool | Which memory entered in each folder, and where their own team keeps that one today | Nothing by hand: four runs of the same ticket, one more memory each; one red, three green, watched on the instructor's screen and on their own Mac | The run each folder was proved with (`graph/runs/010-sale-discount`), when a live run is slow |
 <!-- source:day end -->
 
@@ -59,7 +59,7 @@ Closed for every hour; each hour adds its own in its skill. Follow them; never r
 You were opened at the root of the repository. Before your first answer:
 
 0. **The group's own folder.** Run `test -d .git && echo same-folder || echo separate-copy`.
-   `separate-copy` means you run in a copy of the repository (a git worktree), and nothing
+   `separate-copy` means you run in a copy the Copilot app made of the repository, and nothing
    you write will show up in the folder the group cloned and watches in its terminal. Say
    so in two lines and stop: in the Copilot app, start a new session and choose **Local
    repository** in the dropdown under the prompt box; in a terminal, run `copilot` inside
@@ -107,10 +107,11 @@ checks what it left (a blue step). Either way it leaves the same three files:
 The path, `graph/path.jsonl`, is five lines, one job per step. `sh graph/run.sh
 tickets/<ticket>.md` walks it and hands each line to the node, in
 `graph/runs/<run>/step-<N>-<name>/`. A new run is a new folder: `<ticket>`,
-then `<ticket>-2`, `-3`. Step 1 gives the run its own copy of the repository, a git
-worktree in `graph/runs/<run>/workspace/` on a branch named after the run, from the last
-commit; the other steps work inside that copy, so `app/` in the group folder does not move
-while a run goes, and two runs never share files or a branch: they can go at once. A red
+then `<ticket>-2`, `-3`. Step 1 gives the run its own copy of the repository, an isolated
+clone in `graph/runs/<run>/workspace/` (`graph/copy.sh`) on a branch named after the run
+that lives only in the clone, from the last commit; the other steps work inside that copy,
+so `app/` in the group folder does not move while a run goes, two runs never share files or
+a branch, and a run leaves no branch in the repository: they can go at once. A red
 step goes where its `on_red` says: `stop`, or back to a step, at most `rounds` times; then
 a person decides. The agent that goes back gets the red report in `last`. A run that
 stopped halfway (a closed terminal, a laptop asleep) is picked up when its ticket is
