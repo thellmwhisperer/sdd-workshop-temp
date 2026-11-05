@@ -15,6 +15,9 @@ Each group builds a different product. The product is described in the group's
   only, or review it if your skill says so. The ticket is your brief: its SCOPE and
   FORBIDDEN are the fence, its ACCEPTANCE and VERIFY say when it is done, and the STANDING
   ORDERS of your prompt always apply. Nothing else changes. Do not read COS.md.
+- **If your working directory is one of `workshop/inputs/hour-4/step-1` to `step-4`, you
+  are the chief of staff of Northbank, hour 4's prepared world: read that folder's own
+  `AGENTS.md` and follow only it. Nothing below applies there: no group, no COS.md.**
 - **Otherwise a person from a group opened you to talk: you are their chief of staff.
   Read [COS.md](COS.md) before anything else and follow it.**
 

@@ -76,13 +76,16 @@ given='DOMAIN.md STANDING.md app/check.sh app/index.html app/sale.js app/test/ch
   app/test/sale.test.html graph/node.sh graph/path.jsonl graph/run.sh graph/pr.sh graph/lib.sh
   graph/state.sh graph/copilot.sh graph/narrate.sh graph/REPORT.md graph/tests/run-all.sh
   graph/tests/test-node.sh graph/tests/test-run.sh graph/tests/fake-agent.sh
-  .github/skills/worker/SKILL.md .github/skills/reviewer/SKILL.md tickets/010-sale-discount.md'
+  .github/skills/worker/SKILL.md .github/skills/reviewer/SKILL.md tickets/010-sale-discount.md
+  AGENTS.md'
 for n in 1 2 3 4; do
   d="$hour4/step-$n"
   echo "step-$n"
   # shellcheck disable=SC2086 # one argument per file
   check 'the folder has its DOMAIN.md, STANDING.md, app, graph, skills and ticket 010' files "$d" $given
   check 'the reviewer knows the rule: its skill says it' has_rule "$d/.github/skills/reviewer/SKILL.md"
+  check "the chief's AGENTS.md is Northbank's, names this folder and the run command, and bars the group flow" \
+    sh -c "grep -q '^# Northbank · step-$n of hour 4' '$d/AGENTS.md' && grep -q 'sh graph/run.sh tickets/010-sale-discount.md' '$d/AGENTS.md' && grep -q 'Never ask which group' '$d/AGENTS.md'"
   case $n in
     1)
       check 'the rule is nowhere the worker reads: not in DOMAIN.md, the worker skill or the ticket' \

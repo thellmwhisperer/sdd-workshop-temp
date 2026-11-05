@@ -34,7 +34,7 @@ if [ -n "$transcript" ] && [ -f "$transcript" ]; then
 fi
 going=''
 ended=''
-for j in "$root"/group-*/graph/runs/*/journal.jsonl "$root"/graph/runs/*/journal.jsonl; do
+for j in "$root"/group-*/graph/runs/*/journal.jsonl "$root"/graph/runs/*/journal.jsonl "$root"/workshop/inputs/hour-4/step-*/graph/runs/*/journal.jsonl; do
   [ -f "$j" ] || continue
   run=$(dirname "$j")
   rel=${run#"$root"/}

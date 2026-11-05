@@ -43,6 +43,13 @@ check 'and still names the run going' said "$out" '002-going'
 out=$(stop)
 check 'the ended run is not announced twice' not_said "$out" 003-new
 
+# A run of hour 4's Northbank folders (workshop/inputs/hour-4/step-N) is watched the same.
+steps="$root/workshop/inputs/hour-4/step-1/graph/runs"
+mkdir -p "$steps/010-sale-discount"
+printf '{"seq":1,"event":"run_created","ticket":"tickets/010-sale-discount.md","pid":1}\n{"seq":2,"event":"run_finished","status":"red","why":"step 4 review red: reviewer blocked"}\n' > "$steps/010-sale-discount/journal.jsonl"
+out=$(stop)
+check 'a run in a step folder of hour 4 that ended: announced' said "$out" 'Run workshop/inputs/hour-4/step-1/graph/runs/010-sale-discount ended red: step 4 review red: reviewer blocked.'
+
 # The going run stops (its process gone) with no run_finished: it is not alive, nothing to say.
 sed -i '' "s/\"pid\":$$/\"pid\":999999/" "$runs/002-going/journal.jsonl"
 out=$(stop)
