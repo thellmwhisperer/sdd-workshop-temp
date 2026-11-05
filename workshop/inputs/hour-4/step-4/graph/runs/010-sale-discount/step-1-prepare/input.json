@@ -1,0 +1,1 @@
+{"step":1,"name":"prepare","kind":"commands","dir":".","run":"git worktree add graph/runs/010-sale-discount/workspace -b northbank-step-4-010-sale-discount","on_red":"stop","last":""}

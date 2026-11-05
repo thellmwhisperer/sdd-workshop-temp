@@ -1,0 +1,39 @@
+00:15:43  → Reading .github/skills/worker/SKILL.md
+00:15:43  → Reading tickets/010-sale-discount.md
+00:15:43  → Reading graph/REPORT.md
+00:15:46  → Read the sale code, an existing test and the domain notes
+00:15:49  → Read the check helper and domain rules on discounts
+
+00:15:51  “ I'm checking whether DOMAIN.md mentions discounts, and the grep came back empty.
+00:15:51  → Look for the domain notes
+00:15:51  ✗ not allowed here: outside the group folder, or /tmp
+00:15:53  → grep
+
+00:15:56  “ I'm not sure DOMAIN.md is even there, and the rounding rule isn't spelled out for non-exact amounts.
+00:15:56  → glob
+00:15:59  → Reading DOMAIN.md
+
+00:16:01  “ The rounding rule isn't specified, but the examples are exact, so I'll go with Math.round and mention it in my answer.
+            I'll write the test first, then run it to see it fail.
+00:16:05  → Creating app/test/discount.test.html
+00:16:05  → Run the tests to see the new ones fail
+
+00:16:07  “ The new checks fail as expected.
+            Now the code.
+00:16:10  → Add the discount code and run all checks
+
+00:16:13  “ All green.
+            Writing the report.
+00:16:15  → Creating /Volumes/CrucialX9/workspace/.tmp/orisha-fable/wt-hour4-steps/workshop/inputs/hour-4/step-1/graph/runs/010-sale-discount/step-2-work/report.md
+
+00:16:18  “ The discount ticket is done.
+            `receipt(lines, percent)` now prints a `Discount N%` line under the subtotal and a total after it.
+            With no percentage or 0 the receipt is unchanged.
+            A percentage below 0 or above 100 throws "discount must be 0 to 100".
+            I wrote the new test page first and saw its failures, then wrote the code.
+            After the change, `sh app/check.sh test`, `typecheck` and `lint` are all green.
+            The ticket and `DOMAIN.md` don't say how to round a discount that isn't a whole number of pence.
+            I made it round to the nearest penny, and none of the ticket's examples depend on it.
+            I flagged this in the report so Northbank can confirm.
+            I changed `app/sale.js` and added `app/test/discount.test.html`.
+            The report is at `step-2-work/report.md`.

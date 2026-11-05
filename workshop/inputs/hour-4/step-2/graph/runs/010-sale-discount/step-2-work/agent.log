@@ -1,0 +1,42 @@
+
+00:15:47  “ I'll start by reading the worker skill.
+00:15:47  → Reading .github/skills/worker/SKILL.md
+00:15:47  → Reading tickets/010-sale-discount.md
+00:15:47  → Reading graph/REPORT.md
+
+00:15:49  “ Next I'll read the current sale code, an existing test, and the domain notes.
+00:15:49  → Read sale code, test and domain
+
+00:15:51  “ I'm working out the discount as a per-line amount, rounded to the penny on each line, and then summing those for the total, which matches the ticket.
+            Domain says discounts are rounded per line, so I'll sum per-line discounts.
+            Let me check the test helper.
+00:15:51  → Read the test helper
+
+00:15:57  “ I'll write the test page first, then run it to see it fail.
+00:15:57  → Creating app/test/discount.test.html
+00:15:57  → Run tests, expecting failures
+
+00:15:59  “ The test fails as expected.
+            Now I'll implement the discount, rounded per line as DOMAIN.md requires.
+00:16:03  → Implement discount, run all checks
+
+00:16:07  “ The money value at zero offset doesn't show as a negative sign, so that's fine.
+            All green.
+            Writing the report.
+00:16:09  → Write the report
+00:16:09  ✗ not allowed here: outside the group folder, or /tmp
+
+00:16:11  “ The report has to be saved at the absolute path step-2-work/report.md, and I'll use the create tool to write it there.
+            I'll write the report using the absolute path instead.
+00:16:13  → Creating /Volumes/CrucialX9/workspace/.tmp/orisha-fable/wt-hour4-steps/workshop/inputs/hour-4/step-2/graph/runs/010-sale-discount/step-2-work/report.md
+
+00:16:15  “ The ticket is done: `receipt(lines, percent)` now shows a `Discount N%` line under the subtotal and the discounted total.
+            I wrote the test page first and saw it fail.
+            After the change, `sh app/check.sh test` has no failing lines, and `typecheck` and `lint` both exit 0.
+            - Per-line rounding: `DOMAIN.md` says discounts are rounded to the penny on each line, so I round each line's discount and add them into the one `Discount` line.
+            This gives the ticket's examples (£2.00, and £2.70 for the two-line sale).
+            - No discount: With no percentage or 0, the receipt has no `Discount` line.
+            - Out of range: A percentage below 0 or above 100 throws `discount must be 0 to 100`.
+            - Test page: `app/test/discount.test.html` has six checks, one per acceptance line, with two for the out-of-range rule.
+            I changed `app/sale.js` and added `app/test/discount.test.html`.
+            The report is at `step-2-work/report.md`.

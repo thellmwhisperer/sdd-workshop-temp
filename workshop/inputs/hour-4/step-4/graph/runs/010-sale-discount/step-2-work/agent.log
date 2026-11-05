@@ -1,0 +1,43 @@
+00:16:45  → Reading .github/skills/worker/SKILL.md
+00:16:45  → Reading tickets/010-sale-discount.md
+00:16:45  → Reading graph/REPORT.md
+00:16:48  → Reading app/sale.js
+00:16:48  → Reading app/test/sale.test.html
+00:16:48  → Read domain notes and test helper
+
+00:16:51  “ I'm settling how the per-line discount gets rounded, and it's going to be to the penny.
+00:16:51  → Find test helper functions
+
+00:16:57  “ I'll write the test page first.
+00:16:57  → Creating app/test/discount.test.html
+00:16:57  → Run tests; expect new ones to fail
+
+00:17:00  “ I'm checking the slice(-3) test for the "ends with" case, and the rounding case where 10.5 rounds up to 11 each, giving 22, which holds.
+            The new checks fail as expected.
+            Now the code.
+00:17:04  → Add discount code, run all checks
+
+00:17:10  “ My test's expected total was wrong (2.10 − 0.22 = 1.88); fixing the test.
+00:17:10  → Fix test expectation and rerun checks
+00:17:10  ✗ not allowed here: outside the group folder, or /tmp
+
+00:17:13  “ Writing to /tmp was denied; I'll rerun without it.
+00:17:13  → Fix test expectation and rerun checks
+00:17:16  → Editing app/test/discount.test.html
+00:17:16  → Rerun all tests
+
+00:17:18  “ All green.
+            Writing the report.
+00:17:20  → Creating /Volumes/CrucialX9/workspace/.tmp/orisha-fable/wt-hour4-steps/workshop/inputs/hour-4/step-4/graph/runs/010-sale-discount/step-2-work/report.md
+
+00:17:23  “ Ticket 010 is done.
+            `receipt(lines, percent)` now takes a discount from 0 to 100.
+            A percentage outside that range throws "discount must be 0 to 100".
+            - Receipt: it shows the `Discount N%` line under the subtotal, then the total after it.
+            With no percentage or 0 there is no discount line.
+            - Per-line rounding: the discount is taken per line and rounded to the penny per line, following Priya's rule in the ticket.
+            Halves round up.
+            - Checks: all tests, the typecheck and the lint pass.
+            The new page `app/test/discount.test.html` has one check per acceptance line, plus one for the per-line rounding.
+            - Files: I changed only `app/sale.js` and `app/test/discount.test.html`.
+            - Report: it is written at `step-2-work/report.md`.

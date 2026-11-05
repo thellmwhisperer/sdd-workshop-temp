@@ -1,0 +1,1 @@
+{"status":"red","why":"reviewer blocked: app/sale.js takes the percentage of the subtotal, breaking the rule that a discount goes per line, each line rounded to the penny (three lines of 17p at 10% must total 45p, not 46p).","started":"00:16:21","ended":"00:16:50"}

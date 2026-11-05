@@ -90,7 +90,10 @@ inside=$workspace/$(git rev-parse --show-prefix 2> /dev/null || true)
 # on the branch; after red it stays, for the person who decides.
 finish() {
   copy=''
+  branch=$id
   if [ -d "$workspace" ]; then
+    # The branch step 1 made: Northbank's four folders name it after the folder too.
+    branch=$(git -C "$workspace" rev-parse --abbrev-ref HEAD 2> /dev/null || printf '%s' "$id")
     if [ "$1" = green ] && git worktree remove --force "$workspace" > /dev/null 2>&1; then
       copy=removed
     else
@@ -103,7 +106,7 @@ finish() {
   printf '\n%s%s run %s: %s%s: %s\n' "$bold" "$mark_" "$run" "$1" "$off" "$2"
   if [ -f "$run/pr.url" ]; then printf '  pull request: %s\n' "$(cat "$run/pr.url")"; fi
   case $copy in
-    removed) printf '  the work is on branch %s; the copy is removed\n' "$id" ;;
+    removed) printf '  the work is on branch %s; the copy is removed\n' "$branch" ;;
     kept*) printf '  the copy is %s: a person decides\n' "$copy" ;;
   esac
   printf '  journal: sh graph/state.sh %s\n' "$run"

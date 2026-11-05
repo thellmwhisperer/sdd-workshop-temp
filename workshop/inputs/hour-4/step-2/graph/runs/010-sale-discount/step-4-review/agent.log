@@ -1,0 +1,23 @@
+00:16:24  → Reading .github/skills/reviewer/SKILL.md
+00:16:24  → Reading tickets/010-sale-discount.md
+00:16:24  → Reading graph/REPORT.md
+
+00:16:25  “ I'm the reviewer.
+            I'll read the worker's code and test.
+00:16:26  → Reading app/sale.js
+00:16:26  → Reading app/test/discount.test.html
+
+00:16:28  “ The per-line rounding checks out, so I'll run the test suite next.
+            I'll run the tests, then lint and typecheck.
+00:16:28  → Run tests, lint and typecheck
+
+00:16:31  “ Everything is green and the discount is per line with rounding.
+            I'll write the report.
+00:16:33  → Creating /Volumes/CrucialX9/workspace/.tmp/orisha-fable/wt-hour4-steps/workshop/inputs/hour-4/step-2/graph/runs/010-sale-discount/step-4-review/report.md
+
+00:16:35  “ I reviewed ticket 010 and passed it.
+            I wrote the report to `step-4-review/report.md`.
+            - Business rule: `app/sale.js` works out the discount on each line and rounds each line to the penny.
+            It doesn't take a percentage of the subtotal.
+            - Tests: `app/test/discount.test.html` has a check for every ACCEPTANCE line, and `sh app/check.sh test` is all green.
+            - Other checks: `lint` exited 0 and `typecheck` printed no errors.

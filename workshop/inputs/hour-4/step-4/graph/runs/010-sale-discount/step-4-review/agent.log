@@ -1,0 +1,22 @@
+00:17:31  → Reading .github/skills/reviewer/SKILL.md
+00:17:31  → Reading tickets/010-sale-discount.md
+
+00:17:33  “ I'm acting as the reviewer, so the only thing I'll change is the report, and I'm going to look at the app and the report format first.
+            I'll read the code, the tests and the report format.
+00:17:34  → Read code, tests, report format; run checks
+
+00:17:38  “ I'm checking the per-line rounding.
+00:17:41  → Write the review report
+00:17:41  ✗ not allowed here: outside the group folder, or /tmp
+00:17:45  → Creating /Volumes/CrucialX9/workspace/.tmp/orisha-fable/wt-hour4-steps/workshop/inputs/hour-4/step-4/graph/runs/010-sale-discount/step-4-review/report.md
+
+00:17:49  “ I approved the change, and the report is written with `Verdict: pass`.
+            - Per-line rule: The discount is worked out line by line and rounded to the penny on each line, never taken from the subtotal.
+            Three lines of 17p with 10% off give 45p, not 46p.
+            - Acceptance: All four lines of the ticket have a check in `app/test/discount.test.html`.
+            - Checks: `sh app/check.sh test` shows every line `ok`, including the existing sale tests unchanged.
+            `sh app/check.sh lint` printed nothing and exited 0.
+            - Comment, not a block: A percentage like 10.5 is accepted.
+            The ticket doesn't mention it.
+            I didn't run git, so I didn't check which files changed; I only read the two files in scope.
+            The report is at `graph/runs/010-sale-discount/step-4-review/report.md`.

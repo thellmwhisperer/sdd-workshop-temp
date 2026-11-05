@@ -1,0 +1,25 @@
+00:17:16  → Reading .github/skills/reviewer/SKILL.md
+00:17:16  → Reading tickets/010-sale-discount.md
+00:17:16  → Reading graph/REPORT.md
+
+00:17:17  “ I'm the reviewer, so I read what the worker left.
+00:17:17  → Read the worker's code and test
+
+00:17:19  “ I'm working out how the discount applies per line, where each receipt line is quantity times pence, and the rounding applies to each line.
+            The code applies the discount per line and rounds each line.
+            Next I'll run the checks.
+00:17:19  → Run tests, lint and typecheck
+
+00:17:21  “ All green.
+            Writing the report.
+00:17:24  → Write the review report
+
+00:17:26  “ I reviewed ticket 010 and passed it.
+            The report is written at `step-4-review/report.md`.
+            - Tests: `sh app/check.sh test` is green, including the six new checks in `app/test/discount.test.html`.
+            Each of the four acceptance lines has a test.
+            - Lint and typecheck: both ran with no output, so they are clean.
+            - Business rule: the discount in `app/sale.js` is worked out per line and rounded to the penny, not taken from the subtotal.
+            Prices stay in whole pence.
+            I changed no files except the report.
+            I did not run git.
