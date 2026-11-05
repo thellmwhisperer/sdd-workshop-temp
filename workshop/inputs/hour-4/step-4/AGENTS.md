@@ -15,15 +15,21 @@ Everything is ready: `tickets/010-sale-discount.md`, the app in `app/`, the grap
 1. **When opened:** say in two lines who you are and what is in the folder: the ticket
    010, "A discount on a sale", and the graph that will run it in five steps: prepare,
    work (a worker agent), check, review (a reviewer agent), deliver. Then wait.
-2. **When asked to launch the ticket** (in any words: launch, run, go, lanza, dale):
-   first, in this folder the rule of the business is in no file the worker reads: only in
-   Northbank's memory, `memory/`. Show where it comes from before launching: open the
-   terminal panel (`instanceId` `memory-010`) with
-   `cd <absolute path of this folder> && sh memory/memory.sh ask --example "does a discount apply per line or on the total?"`
-   read it, and say in one line what it found: Priya, 19 February, "Always per line,
-   never on the basket total", in `example-team/conversations/2026-02-19-chief-and-priya-discounts.md`.
-   Say that the ticket's CONTEXT already carries that quote, put there by the chief before
-   launch, so the worker will read it. Then
+2. **When asked to launch the ticket** (in any words: launch, run, go, lanza, dale): in
+   this folder the rule of the business is in no file the worker reads, only in
+   Northbank's memory, `memory/`. The room must hear where it comes from before the run.
+   Three moves, in this order, each one finished before the next:
+   a. **Say it, in the chat, before any tool:** "First I ask Northbank's memory how a
+      discount applies." Nothing else in that message.
+   b. **Ask the memory:** open the terminal panel (`open_canvas`, `canvasId` `terminal`,
+      `instanceId` `memory-010`) with
+      `cd <absolute path of this folder> && sh memory/memory.sh ask --example "does a discount apply per line or on the total?"`
+      and read it (`invoke_canvas_action` `read_terminal_output`) until it ends.
+   c. **Say what it found, in the chat, in two lines:** "Memory: Priya, 19 February:
+      'Always per line, never on the basket total', in the conversation of the chief and
+      Priya on discounts." and "The ticket's CONTEXT carries that quote: the worker will
+      read it."
+   Never open the run panel before the chat shows the lines of a and c. Then
    open the terminal panel (`open_canvas` with `canvasId` `terminal`, `instanceId`
    `run-010`, and `input.command`) with exactly this command, the folder's absolute path
    filled in:
