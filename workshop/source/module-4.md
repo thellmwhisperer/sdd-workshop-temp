@@ -1,19 +1,86 @@
 # Module 4 · Memory that improves the system
 
-Closing question: What happened in your case, and what changed after it?
-Given: The memory tool; the group's own day: its runs, its notes and its decisions
-The group decides: Which case of their own day to rebuild; which question to ask; which improvement to make
-The group builds: An index of their own day; one case of their own rebuilt; one eval with and without retrieval; one improvement
-Rescue: The example team's cases (`memory/CASES.md`), when their own runs are too few
+Closing question: Same ticket, four runs: what did the worker know each time, and where did it come from?
+Given: Northbank, a prepared world: four folders, `step-1` to `step-4`, each with ticket 010, its graph and its own copy of the memory tool
+The group decides: Which memory entered in each folder, and where their own team keeps that one today
+The group builds: Nothing by hand: four runs of the same ticket, one more memory each; one red, three green, watched on the instructor's screen and on their own Mac
+Rescue: The run each folder was proved with (`graph/runs/010-sale-discount`), when a live run is slow
 
-## How do you remember?
+## A bigger window does not make a better agent
+
+Layout: text
+
+- **Then:** a few thousand tokens. Now a million or more: room for more instructions, tool results, docs.
+- **The study:** 18 frontier models, and all of them got less reliable as the window got bigger. It has a name: context rot.
+- **Context engineering:** deciding what actually goes into the window at each step of an agent's run.
+
+> THE MORE TOKENS IN THE WINDOW, THE LESS RELIABLY THE MODEL USES ANY OF THEM
+
+## What fills the window of a migration agent
+
+Layout: five
+
+- The system prompt: the standing instructions for how the agent operates
+- The task: a couple of lines, near the front
+- Project instructions, an AGENTS.md on how this project is built, and every tool definition
+- The message history: every step it has taken. After an hour, a lot of steps
+- Tool results, the biggest band: file contents, test output, error logs, schema dumps
+
+## Attention is a budget
+
+Layout: numbers
+
+- **1M** tokens a window may hold. The attention spread across them is finite
+- **18** frontier models in one study. Every one got less reliable as the window grew
+- **46 → 19** tools: a model failed a task offered 46 tools, and passed the same task with 19
+
+## Four ways a window goes bad
+
+Layout: steps
+
+- **Poisoning:** a false note the agent wrote itself, "the new driver retries, delete the retry code", treated as ground truth. File after file, good code deleted.
+- **Distraction:** an hour of its own history outweighs its training. It drifts into doing more of what it already did.
+- **Confusion:** every tool definition sits in the window, used or not. More tools, harder choice.
+- **Clash:** the agent finds the note was wrong and writes that down too. Both versions sit in the window.
+
+Nothing is looked up: every token competes for attention
+
+## Four fixes, all by throwing something away
+
+Layout: steps
+
+- **Validate:** check a conclusion against something real before writing it down. One connection test, no note.
+- **Compact:** summarize the long history, a photocopy of a photocopy. Better: detail into files, pulled in when needed.
+- **Curate:** give the agent the handful of tools the job calls for. It can fetch the others.
+- **Prune:** delete the superseded version, or start a fresh window with the corrected state.
+
+An agent gets better at long tasks by holding less
+
+## The four fixes in the graph you built
+
+Layout: steps
+
+- **Validate:** the check step and the reviewer: a gate no note of the agent can talk out of
+- **Compact:** one clean window per ticket; the journal, the reports and the verdicts live in files, not in the window
+- **Curate:** the worker's narrow context, and a skill loaded only when the task matches
+- **Prune:** a run is never reused: a fresh copy and a fresh window for every ticket
+
+Your graph holds less by design
+
+## Key message
+
+Layout: key
+
+> CONTEXT ENGINEERING: DECIDE WHAT GOES INTO THE WINDOW AT EACH STEP
+
+## How do humans remember?
 
 Layout: text
 
 - **Right now:** what you are holding in your head this minute.
 - **Facts:** what you know is true, like the discount going before VAT.
-- **Skills:** how to do things, like writing backwards on glass.
-- **Experience:** the three hours lost on the wrong Kubernetes cluster.
+- **Skills:** playing the guitar like Paco de Lucía.
+- **Experience:** the three hours lost fixing a broken image in a site because it was badly cached in the browser.
 
 > A WELL-DESIGNED AGENT NEEDS THE SAME FOUR
 
@@ -21,7 +88,7 @@ Layout: text
 
 Layout: five
 
-- Working: the context window. Like RAM: fast, volatile, with a ceiling
+- Working: the context window. Like RAM: fast, doesn't last forever, with a ceiling (from 256k to 1M)
 - Semantic: what it knows in general. In practice, markdown files such as AGENTS.md
 - Procedural: how to do things. SKILL.md, loaded only when the task matches
 - Episodic: what happened before and what it learned. The hardest to get right
@@ -114,20 +181,20 @@ Layout: text
 
 > THE SYSTEM IMPROVES AS IT IS USED. ONLY IF SOMEONE LOOKS.
 
-## Hands on 4 · Ask your system
+## Hands on 4 · One ticket, four memories
 
 Layout: hands-on
 
-1. a run from hour 3 still going is left going. When it ends, read what it left with your chief: the journal, the worker's report, the reviewer's verdict, the pull request
-2. index your day: your runs, your notes, your decisions
-3. rebuild one case of your own: what happened, when, who decided, what changed. Every answer quotes the piece and who said it
-4. the eval: same question with and without retrieval. The chief proposes one improvement: another model, another cap, a new skill
+1. open Copilot in workshop/inputs/hour-4/step-1, Northbank's world, and ask it to launch ticket 010. The worker knows only the ticket: it takes the discount on the subtotal, and the reviewer blocks. Red
+2. close it, open Copilot in step-2, same words. Now the rule is in DOMAIN.md. Green
+3. step-3: the rule is in the worker's skill, not in DOMAIN.md. Green, with the discount test written first
+4. step-4: the rule is in no file, only in Northbank's memory. The chief asks memory.sh, finds Priya's words of 19 February, and the ticket carries them. Green
 
-You: Why did the reviewer block 001?
-Chief: Round 1: it took the biggest saving of all promotions. That rule belongs to 002 to 005. Here is the reviewer's report.
+You: Launch ticket 010.
+Chief: Run 010 red: the reviewer blocked. app/sale.js takes the percentage of the subtotal; Northbank's rule is per line, rounded to the penny. A person decides.
 
 # Decided
 
-- Hour 4 analyses what the day piled up: the runs, the decisions and the conversations (decision 8196).
-- Plan A is the group's own day; the example team's cases are the rescue, only when their own runs are too few (decided 1 November).
-- A run of hour 3 still going when hour 4 starts is left going; when it ends, the group reads what it left before indexing it (decisions 8216 and 8218).
+- Hour 4 is its own prepared world, Northbank: four folders, `step-1` to `step-4`, the same ticket 010, one more memory each; the instructor shares the screen and everyone follows on their Mac (decision 8271).
+- The theory of hour 4 is two IBM videos, context engineering and the four types of memory; the context window is the working memory of CoALA (decision 8271).
+- A run of hour 3 still going when hour 4 starts is left going; the group reads what it left (decisions 8216 and 8218).
